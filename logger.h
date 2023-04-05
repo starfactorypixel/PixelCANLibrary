@@ -12,6 +12,7 @@
         #ifdef DEBUG_X64
             #define LOGstring(fmt, ...) do { fprintf(stderr, fmt, ##__VA_ARGS__); } while (0)
         #else
+            #include "stm32f1xx_hal.h"
             #define LOGstring(fmt, ...) do { extern UART_HandleTypeDef huart1; char str_buff[255]; sprintf(str_buff, fmt, ##__VA_ARGS__); HAL_UART_Transmit(&huart1, (uint8_t *)str_buff, strlen(str_buff), 100); } while (0)
         #endif
 
