@@ -2,7 +2,7 @@
 #define CANMANAGER_H
 // #pragma once
 
-#include "stm32f1xx_hal.h"
+//#include "stm32f1xx_hal.h"
 
 #include "CAN_common.h"
 #include "CANFrame.h"
@@ -30,7 +30,7 @@ public:
 
     virtual bool take_new_rx_frame(CANFrame &can_frame) = 0;
     virtual bool take_new_rx_frame(can_id_t id, uint8_t *data, uint8_t data_length) = 0;
-    virtual bool take_new_rx_frame(CAN_RxHeaderTypeDef &header, uint8_t aData[]) = 0;
+    //virtual bool take_new_rx_frame(CAN_RxHeaderTypeDef &header, uint8_t aData[]) = 0;
 
     virtual uint8_t get_rx_queue_size() = 0;
     virtual uint8_t get_tx_queue_size() = 0;
@@ -41,7 +41,7 @@ public:
 
     virtual bool give_tx_frame(CANFrame &can_frame) = 0;
     virtual bool give_tx_frame(can_id_t &id, uint8_t *data, uint8_t &data_length) = 0;
-    virtual bool give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[]) = 0;
+    //virtual bool give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[]) = 0;
 
     virtual uint8_t get_can_objects_count() = 0;
     virtual bool has_can_objects() = 0;
@@ -72,7 +72,7 @@ public:
 
     bool take_new_rx_frame(CANFrame &can_frame) override;
     bool take_new_rx_frame(can_id_t id, uint8_t *data, uint8_t data_length) override;
-    bool take_new_rx_frame(CAN_RxHeaderTypeDef &header, uint8_t aData[]) override;
+    //bool take_new_rx_frame(CAN_RxHeaderTypeDef &header, uint8_t aData[]) override;
 
     uint8_t get_rx_queue_size() override;
     uint8_t get_tx_queue_size() override;
@@ -83,7 +83,7 @@ public:
 
     bool give_tx_frame(CANFrame &can_frame) override;
     bool give_tx_frame(can_id_t &id, uint8_t *data, uint8_t &data_length) override;
-    bool give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[]) override;
+    //bool give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[]) override;
 
     uint8_t get_can_objects_count() override;
     bool has_can_objects() override;

@@ -128,11 +128,13 @@ bool CANManager::take_new_rx_frame(can_id_t id, uint8_t *data, uint8_t data_leng
     return take_new_rx_frame(new_frame);
 }
 
+/*
 bool CANManager::take_new_rx_frame(CAN_RxHeaderTypeDef &header, uint8_t aData[])
 {
     CANFrame new_frame(header.StdId, aData, header.DLC);
     return take_new_rx_frame(new_frame);
 }
+*/
 
 bool CANManager::pop_rx_frame_from_queue(CANFrame &can_frame)
 {
@@ -197,6 +199,7 @@ bool CANManager::give_tx_frame(can_id_t &id, uint8_t *data, uint8_t &data_length
     return true;
 }
 
+/*
 bool CANManager::give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[])
 {
     if (!has_tx_frames_for_transmission())
@@ -211,6 +214,7 @@ bool CANManager::give_tx_frame(CAN_TxHeaderTypeDef &header, uint8_t aData[])
 
     return true;
 }
+*/
 
 uint8_t CANManager::get_can_objects_count()
 {
