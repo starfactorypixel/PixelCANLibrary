@@ -2,6 +2,7 @@
 #define CANLIBRARY_H
 
 #include "logger.h"
+#include "CAN_block_common.h"
 #include "CAN_common.h"
 #include "DataField.h"
 #include "CANFrame.h"
