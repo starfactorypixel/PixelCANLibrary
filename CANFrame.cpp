@@ -51,7 +51,7 @@ void CANFrame::set_frame(can_id_t id, uint8_t *data, uint8_t data_length)
     _id = id;
     _data_length = data_length;
     memcpy(_data, data, _data_length);
-    _is_initialized = true;
+    set_initialized_flag(true);
 }
 
 void CANFrame::set_frame(can_id_t id, uint8_t data_length, uint8_t v1, uint8_t v2, uint8_t v3, uint8_t v4, uint8_t v5, uint8_t v6, uint8_t v7, uint8_t v8)
@@ -69,7 +69,7 @@ void CANFrame::set_frame(can_id_t id, uint8_t data_length, uint8_t v1, uint8_t v
     _data[5] = v6;
     _data[6] = v7;
     _data[7] = v8;
-    _is_initialized = true;
+    set_initialized_flag(true);
 }
 
 void CANFrame::clear_frame()
@@ -80,7 +80,12 @@ void CANFrame::clear_frame()
         _data[i] = 0x00;
     }
     _data_length = 0;
-    _is_initialized = false;
+    set_initialized_flag(false);
+}
+
+void CANFrame::set_initialized_flag(bool initialized)
+{
+    _is_initialized = initialized;
 }
 
 bool CANFrame::is_initialized()
@@ -108,15 +113,20 @@ const CAN_function_id_t CANFrame::get_function_id()
 
 void CANFrame::set_function_id(CAN_function_id_t id)
 {
-    if (!has_data())
-        return;
-
     get_data_pointer()[0] = id;
+
+    if (!has_data())
+        set_data_length(1);
 }
 
 const uint8_t CANFrame::get_data_length()
 {
     return _data_length;
+}
+
+void CANFrame::set_data_length(uint8_t data_length)
+{
+    _data_length = data_length;
 }
 
 const uint8_t CANFrame::get_max_data_length()

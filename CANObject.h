@@ -69,28 +69,19 @@ public:
 
     // only updates states of data fields and transfer CANObject in error state if there is at least one erroneous DataField
     can_object_state_t update_state();
-    // updates local data storage, performs active and automatic/blended functions calls
+    // updates state, performs active and automatic/blended functions calls
     bool update();
-    // updates local data storage only
-    bool update_local_data();
 
     void print(const char *prefix);
 
     // only fills specified CANFrame with data from local storage; no error state checks, data updates or other additional stuff
-    bool fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t func);
+    bool fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t func_id);
 
     // it goes through all CANFunctions and perform their process(CANFrame) if function id matches
     bool process_incoming_frame(CANFrame &can_frame);
 
 protected:
     void _set_state(can_object_state_t state);
-
-    bool _delete_data_local();
-    bool _resize_data_local(uint8_t new_size);
-    bool _fit_data_local_to_data_fields();
-    void *_get_data_local();
-
-    bool _copy_data_field_to_local(DataField &data_field, uint8_t dest_byte_offset);
 
 private:
     can_id_t _id = 0;
@@ -99,8 +90,6 @@ private:
 
     std::list<DataField> _data_fields_list;
     std::list<CANFunctionBase *> _functions_list;
-
-    uint8_t *_data_local = nullptr;
 
     // object name for logging
     char *_name = nullptr;

@@ -12,7 +12,7 @@ const char *CANObject::_state_local_data_buffer_size_error = "local data buffer 
 const char *CANObject::_state_unknown_error = "unknown error";
 
 CANObject::CANObject()
-    : _id(0), _parent(nullptr), _state(COS_UNKNOWN_ERROR), _data_local(nullptr), _name(nullptr)
+    : _id(0), _parent(nullptr), _state(COS_UNKNOWN_ERROR), _name(nullptr)
 {
     _data_fields_list.clear();
     _functions_list.clear();
@@ -34,7 +34,6 @@ CANObject::~CANObject()
             delete i;
     }
     _functions_list.clear();
-    _delete_data_local();
     delete_name();
 }
 
@@ -72,36 +71,6 @@ uint32_t CANObject::get_tick()
     return get_parent()->get_tick();
 }
 
-bool CANObject::_delete_data_local()
-{
-    if (_data_local == nullptr)
-        return false;
-
-    delete[] _data_local;
-    _data_local = nullptr;
-
-    return true;
-}
-
-bool CANObject::_resize_data_local(uint8_t new_size)
-{
-    _delete_data_local();
-    _data_local = new uint8_t[new_size];
-    memset(_data_local, 0, new_size);
-
-    return true;
-}
-
-bool CANObject::_fit_data_local_to_data_fields()
-{
-    return _resize_data_local(calculate_all_data_size());
-}
-
-void *CANObject::_get_data_local()
-{
-    return _data_local;
-}
-
 uint8_t CANObject::get_data_fields_count()
 {
     return _data_fields_list.size();
@@ -109,23 +78,19 @@ uint8_t CANObject::get_data_fields_count()
 
 bool CANObject::has_data_fields()
 {
-    if ((get_data_fields_count() == 0))
-    {
-        _set_state(COS_DATA_FIELD_ERROR);
-        return false;
-    }
-    return true;
+    return (get_data_fields_count() != 0);
 }
 
 DataField *CANObject::add_data_field()
 {
     DataField df;
-    df.update_state();
     _data_fields_list.push_back(df);
+    DataField *pdf = &_data_fields_list.back();
+    pdf->update_state();
 
     update_state();
 
-    return &_data_fields_list.back();
+    return pdf;
 }
 
 DataField *CANObject::add_data_field(data_field_t type, void *data, uint32_t array_item_count)
@@ -166,6 +131,7 @@ DataField *CANObject::get_data_field(uint8_t index)
 
 bool CANObject::has_data_fields_alarm()
 {
+    // TODO: alarm refactoring needed!
     for (DataField &i : _data_fields_list)
     {
         i.update_state();
@@ -219,6 +185,7 @@ const char *CANObject::get_state_name()
 bool CANObject::is_state_ok()
 {
     return get_state() == COS_OK;
+    // return ((get_state()) & (1<<(7)));  // check if bit 7 is set
 }
 
 void CANObject::_set_state(can_object_state_t state)
@@ -254,18 +221,22 @@ void CANObject::delete_name()
 // only updates states of data fields and transfer CANObject in error state if there is at least one erroneous DataField
 can_object_state_t CANObject::update_state()
 {
-    if (!has_data_fields())
-        return get_state();
-
-    for (DataField &i : _data_fields_list)
+    if (has_data_fields())
     {
-        i.update_state();
-    }
+        for (DataField &i : _data_fields_list)
+        {
+            i.update_state();
+        }
 
-    _set_state(COS_OK);
-    DataField *erroneous_data_field = get_first_erroneous_data_field();
-    if (erroneous_data_field != nullptr)
+        _set_state(COS_OK);
+        DataField *erroneous_data_field = get_first_erroneous_data_field();
+        if (erroneous_data_field != nullptr)
+            _set_state(COS_DATA_FIELD_ERROR);
+    }
+    else
+    {
         _set_state(COS_DATA_FIELD_ERROR);
+    }
 
     return get_state();
 }
@@ -277,10 +248,6 @@ bool CANObject::update()
     if (!is_state_ok())
         return false;
 
-    // work with data fields
-    if (!update_local_data())
-        return false;
-
     // work with functions
     for (CANFunctionBase *i : _functions_list)
     {
@@ -289,25 +256,6 @@ bool CANObject::update()
             i->process();
     }
 
-    return true;
-}
-
-// updates local data storage only
-bool CANObject::update_local_data()
-{
-    _fit_data_local_to_data_fields();
-
-    // use second one byte as the start point for DataFields
-    // because we should reserve the first byte for CAN frame FUNC_TYPE
-    uint8_t destination_offset = 1;
-    for (DataField &i : _data_fields_list)
-    {
-        i.update_state();
-        i.update_local_copy();
-        if (!_copy_data_field_to_local(i, destination_offset))
-            return false;
-        destination_offset += i.get_data_byte_array_length();
-    }
     return true;
 }
 
@@ -333,22 +281,6 @@ void CANObject::print(const char *prefix)
         sprintf(str_buff, "%s        #%d ", prefix, ++count);
         i->print(str_buff);
     }
-}
-
-bool CANObject::_copy_data_field_to_local(DataField &data_field, uint8_t dest_byte_offset)
-{
-    uint8_t remaining_data = 0;
-    uint8_t *data_pointer = ((uint8_t *)_get_data_local());
-    remaining_data = calculate_all_data_size() - dest_byte_offset;
-    if (remaining_data == 0)
-    {
-        _set_state(COS_LOCAL_DATA_BUFFER_SIZE_ERROR);
-        return false;
-    }
-    data_pointer += dest_byte_offset;
-    data_field.copy_data_to(data_pointer, remaining_data);
-
-    return true;
 }
 
 DataField *CANObject::get_first_erroneous_data_field()
@@ -482,18 +414,40 @@ uint8_t CANObject::get_functions_count()
 
 // only fills specified CANFrame with data from local storage
 // no error state checks, data updates or other additional stuff
-bool CANObject::fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t func)
+bool CANObject::fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t func_id)
 {
-    if (_get_data_local() == nullptr)
-        return false;
-
-    *(uint8_t *)_get_data_local() = func;
+    can_frame.clear_frame();
 
     if (can_frame.get_max_data_length() < calculate_all_data_size())
         return false;
 
-    can_frame.clear_frame();
-    can_frame.set_frame(get_id(), (uint8_t *)_get_data_local(), calculate_all_data_size());
+    // use second byte as the start point for DataFields
+    // because we should reserve the first byte for CAN frame FUNC_TYPE
+    uint8_t destination_offset = 1;
+    int16_t remaining_data = 0;
+    uint8_t *data_pointer = can_frame.get_data_pointer() + destination_offset;
+    for (DataField &i : _data_fields_list)
+    {
+        remaining_data = can_frame.get_max_data_length() - destination_offset;
+        if (remaining_data <= 0)
+        {
+            _set_state(COS_LOCAL_DATA_BUFFER_SIZE_ERROR);
+            return false;
+        }
+
+        i.update_state();
+        if (i.has_errors())
+            return false;
+
+        i.copy_data_to(data_pointer, remaining_data);
+
+        data_pointer += i.get_data_byte_array_length();
+        destination_offset += i.get_data_byte_array_length();
+    }
+    can_frame.set_data_length(calculate_all_data_size());
+    can_frame.set_function_id(func_id);
+    can_frame.set_id(get_id());
+    can_frame.set_initialized_flag(true);
 
     return true;
 }
@@ -505,6 +459,7 @@ bool CANObject::process_incoming_frame(CANFrame &can_frame)
 
     for (CANFunctionBase *i : _functions_list)
     {
+        // TODO: is there correct checking of enabled function state?
         if (i->get_id() == can_frame.get_function_id() && i->is_responding_function())
             i->process(&can_frame);
     }

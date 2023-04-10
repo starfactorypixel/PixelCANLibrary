@@ -28,6 +28,7 @@ public:
 
     void clear_frame();
 
+    void set_initialized_flag(bool initialized);
     bool is_initialized();
 
     const can_id_t get_id();
@@ -37,6 +38,8 @@ public:
     void set_function_id(CAN_function_id_t id);
 
     const uint8_t get_data_length();
+    void set_data_length(uint8_t data_length);
+
     static const uint8_t get_max_data_length();
     uint8_t *get_data_pointer();
     bool copy_frame_data_to(uint8_t *destination, uint8_t max_dest_length);

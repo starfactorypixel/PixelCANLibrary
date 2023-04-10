@@ -420,7 +420,7 @@ CAN_function_result_t CANFunctionRequest::_default_handler(CANFrame *can_frame)
     CANObject &co = *get_parent();
     can_object_state_t co_state = co.update_state();
 
-    if (co.is_state_ok() && co.update_local_data())
+    if (co.is_state_ok())
     {
         co.fill_can_frame_with_data(*can_frame, get_id());
         return CAN_RES_NEXT_OK;
@@ -506,7 +506,6 @@ CAN_function_result_t CANFunctionSimpleEvent::_timer_handler()
 {
     CANObject &can_object = *get_parent();
     CANFrame can_frame;
-    can_object.update_local_data();
     can_object.fill_can_frame_with_data(can_frame, get_id());
 
     can_frame.print("CANFunctionSimpleEvent: ");
@@ -574,7 +573,7 @@ CAN_function_result_t CANFunctionSet::_after_external_handler(CAN_function_resul
         CANObject &co = *get_parent();
         can_object_state_t co_state = co.update_state();
 
-        if (co.is_state_ok() && co.update_local_data())
+        if (co.is_state_ok())
         {
             co.fill_can_frame_with_data(*can_frame, get_id());
             return CAN_RES_NEXT_OK;

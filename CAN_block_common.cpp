@@ -41,15 +41,10 @@ bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_he
     //CANFunctionTimerNormal *func_timer_norm = nullptr;
     CANFunctionRequest *func_request = nullptr;
     CANFunctionSimpleEvent *func_event = nullptr;
-    data_mapper_t min_val = {0};
-    data_mapper_t max_val = {0};
 
     co = cm.add_can_object(can_id, "BlockHealth");
     df = co->add_data_field(DF_UINT16, &block_health.voltage);
     df = co->add_data_field(DF_INT16, &block_health.current);
-    min_val.i16 = -500;
-    max_val.i16 = 500;
-    df->set_alarm_checker(min_val, max_val);
     df = co->add_data_field(DF_INT8, &block_health.temperature);
     func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
     func_event = (CANFunctionSimpleEvent *)co->add_function(CAN_FUNC_EVENT_ERROR);

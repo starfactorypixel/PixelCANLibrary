@@ -82,6 +82,15 @@ enum can_object_state_t : uint8_t
     COS_LOCAL_DATA_BUFFER_SIZE_ERROR = 0x02,
     COS_UNKNOWN_ERROR = 0xFF,
 };
+/*
+enum can_object_state_t : uint8_t
+{   // the most significant bit is the error flag
+    COS_OK = 0b00000000,
+    COS_DATA_FIELD_ERROR = 0b10000001,
+    COS_LOCAL_DATA_BUFFER_SIZE_ERROR = 0b10000010,
+    COS_UNKNOWN_ERROR = 0b10000000,
+};
+*/
 
 /******************************************************************************************************************************
  *
@@ -130,10 +139,28 @@ enum CAN_function_id_t : uint8_t
     CAN_FUNC_REQUEST_OUT_OK = 0x51,
     CAN_FUNC_REQUEST_OUT_ERR = 0xD1,
 
+    CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
+    CAN_FUNC_SEND_RAW_INIT_OUT_OK = 0x70,
+    CAN_FUNC_SEND_RAW_INIT_OUT_ERR = 0xF0,
+
+    CAN_FUNC_SEND_RAW_CHUNK_START_IN = 0x31,
+    CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK = 0x71,
+    CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR = 0xF1,
+
+    CAN_FUNC_SEND_RAW_CHUNK_DATA_IN = 0x32,
+    // CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_OK = not allowed,
+    CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR = 0xF2,
+
+    CAN_FUNC_SEND_RAW_CHUNK_END_IN = 0x33,
+    CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK = 0x73,
+    CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR = 0xF3,
+
+    CAN_FUNC_SEND_RAW_FINISH_IN = 0x34,
+    CAN_FUNC_SEND_RAW_FINISH_OUT_OK = 0x74,
+    CAN_FUNC_SEND_RAW_FINISH_OUT_ERR = 0xF4,
+
     CAN_FUNC_TIMER_NORMAL = 0x61,
-
     CAN_FUNC_TIMER_ATTENTION = 0x62,
-
     CAN_FUNC_TIMER_CRITICAL = 0x63,
 
     CAN_FUNC_SIMPLE_SENDER = 0xC0,
@@ -186,6 +213,7 @@ enum pixel_error_codes_t : uint8_t
     PIX_ERR_DATA_FIELD = 0x03,
     PIX_ERR_FUNCTION = 0x04,
     PIX_ERR_CAN_MANAGER = 0x05,
+    //PIX_ERR_CAN_RAW_RX = 0x06,
 };
 
 #endif // CAN_COMMON_H
