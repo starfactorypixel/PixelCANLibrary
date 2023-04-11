@@ -47,7 +47,7 @@ enum data_field_t : uint8_t
 enum data_field_state_t : uint8_t
 {
     DFS_OK = 0x00,
-    DFS_ALARM = 0x0F,
+    //DFS_ALARM = 0x0F,
     DFS_ERROR = 0xFF,
 };
 
@@ -79,7 +79,7 @@ enum can_object_state_t : uint8_t
 {
     COS_OK = 0x00,
     COS_DATA_FIELD_ERROR = 0x01,
-    COS_LOCAL_DATA_BUFFER_SIZE_ERROR = 0x02,
+    COS_DATA_BUFFER_SIZE_ERROR = 0x02,
     COS_UNKNOWN_ERROR = 0xFF,
 };
 /*

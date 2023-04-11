@@ -40,11 +40,10 @@ public:
     uint8_t get_data_fields_count();
     bool has_data_fields();
 
-    DataField *add_data_field();
     DataField *add_data_field(data_field_t type, void *data, uint32_t array_item_count = 1);
     bool delete_data_field(uint8_t index);
     DataField *get_data_field(uint8_t index);
-    bool has_data_fields_alarm();
+    //bool has_data_fields_alarm();
 
     uint8_t calculate_all_data_size();
 
@@ -82,13 +81,14 @@ public:
 
 protected:
     void _set_state(can_object_state_t state);
+    DataField *_add_data_field(DataField *data_field);
 
 private:
     can_id_t _id = 0;
     CANManager *_parent = nullptr;
     can_object_state_t _state = COS_UNKNOWN_ERROR;
 
-    std::list<DataField> _data_fields_list;
+    std::list<DataField *> _data_fields_list;
     std::list<CANFunctionBase *> _functions_list;
 
     // object name for logging
@@ -99,7 +99,7 @@ private:
     // the object state names for logging
     static const char *_state_object_ok;
     static const char *_state_data_field_error;
-    static const char *_state_local_data_buffer_size_error;
+    static const char *_state_data_buffer_size_error;
     static const char *_state_unknown_error;
 };
 

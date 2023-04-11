@@ -494,8 +494,10 @@ CAN_function_result_t CANFunctionSimpleEvent::_default_handler(CANFrame *can_fra
 {
     CANObject &can_object = *get_parent();
 
+    /* TODO: alarm refactoring should be done
     if (!can_object.has_data_fields_alarm())
         return CAN_RES_FINAL;
+    */
 
     return CANFunctionTimerBase::_default_handler(can_frame);
 }
