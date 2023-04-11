@@ -5,8 +5,9 @@
  * CANFunction base class: base class for all CAN functions
  *
  ******************************************************************************************************************************/
-const char *CANFunctionBase::_state_function_stopped = "stopped";
+const char *CANFunctionBase::_state_function_disabled = "disabled";
 const char *CANFunctionBase::_state_function_active = "active";
+const char *CANFunctionBase::_state_function_suspended = "suspended";
 const char *CANFunctionBase::_value_unknown = "unknown";
 
 const char *CANFunctionBase::_type_function_responding = "responding";
@@ -19,7 +20,7 @@ CANFunctionBase::CANFunctionBase(CAN_function_id_t id,
                                  CAN_function_handler_t external_handler,
                                  CANFunctionBase *next_ok_function,
                                  CANFunctionBase *next_err_function)
-    : _id(id), _state(CAN_FS_STOPPED), _parent(parent), _type(CAN_FT_INDIRECT), _external_handler(external_handler),
+    : _id(id), _state(CAN_FS_DISABLED), _parent(parent), _type(CAN_FT_INDIRECT), _external_handler(external_handler),
       _next_ok_function(next_ok_function), _next_err_function(next_err_function), _name(nullptr)
 {
 }
@@ -115,7 +116,7 @@ bool CANFunctionBase::has_next_err_function()
 
 void CANFunctionBase::disable()
 {
-    _set_state(CAN_FS_STOPPED);
+    _set_state(CAN_FS_DISABLED);
 }
 
 void CANFunctionBase::enable()
@@ -125,7 +126,7 @@ void CANFunctionBase::enable()
 
 bool CANFunctionBase::is_active()
 {
-    return get_state() == CAN_FS_ACTIVE;
+    return get_state() != CAN_FS_DISABLED;
 }
 
 CAN_function_state_t CANFunctionBase::get_state()
@@ -137,11 +138,14 @@ const char *CANFunctionBase::get_state_name()
 {
     switch (get_state())
     {
-    case CAN_FS_STOPPED:
-        return _state_function_stopped;
+    case CAN_FS_DISABLED:
+        return _state_function_disabled;
 
     case CAN_FS_ACTIVE:
         return _state_function_active;
+    
+    case CAN_FS_SUSPENDED:
+        return _state_function_suspended;
 
     default:
         return _value_unknown;

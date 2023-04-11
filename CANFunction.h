@@ -110,7 +110,7 @@ protected:
 private:
     // common properties
     CAN_function_id_t _id = CAN_FUNC_NONE;
-    CAN_function_state_t _state = CAN_FS_STOPPED;
+    CAN_function_state_t _state = CAN_FS_DISABLED;
     CANObject *_parent = nullptr;
     CAN_function_type_t _type = CAN_FT_INDIRECT;
 
@@ -128,8 +128,9 @@ private:
     // 'unknown' for logging
     static const char *_value_unknown;
     // the function state names for logging
-    static const char *_state_function_stopped;
+    static const char *_state_function_disabled;
     static const char *_state_function_active;
+    static const char *_state_function_suspended;
     // the function type names for logging
     static const char *_type_function_responding;
     static const char *_type_function_automatic;
