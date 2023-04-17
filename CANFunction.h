@@ -36,8 +36,10 @@ public:
 
     // external handler
     // return value:
-    //      true - the next_ok_function will be called after handler
-    //      false - the next_err_function will be called after handler
+    //      CAN_RES_NEXT_OK - the next_ok_function will be called after handler
+    //      CAN_RES_NEXT_ERR - the next_err_function will be called after handler
+    //      CAN_RES_NONE - there is no result, nothing was done
+    //      CAN_RES_FINAL - all stuff was done, but next handlers should not be called
     void set_external_handler(CAN_function_handler_t external_handler);
     CAN_function_handler_t get_external_handler();
     bool has_external_handler();
@@ -51,12 +53,15 @@ public:
     bool has_next_err_function();
 
     // function state:
-    // stopped - function is OFF, it doesn't work, doesn't send any error replay etc.
+    // disabled - function is OFF, it doesn't work, doesn't send any error replay etc.
     //           for example: timer is stopped; event is suppressed
     // active  - function is working in normal mode
+    // suspended - function is working, but is responsing with error
     void disable();
     void enable();
+    void suspend();
     bool is_active();
+    bool is_suspended();
     CAN_function_state_t get_state();
     const char *get_state_name();
 
@@ -105,7 +110,7 @@ protected:
     virtual CAN_function_result_t _after_external_handler(CAN_function_result_t external_handler_result, CANFrame *can_frame = nullptr) { return external_handler_result; };
 
     // fills frame with correct error data
-    void _fill_error_can_frame(CANFrame &can_frame, pixel_error_codes_t error_code, uint8_t additional_error_code = 0);
+    void _fill_error_can_frame(CANFrame &can_frame, pixel_error_section_t error_section, uint8_t error_code = 0);
 
 private:
     // common properties
@@ -286,6 +291,141 @@ protected:
 
     // should override it with error value returned
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendRawBase: base function for all the family of the send raw functions
+ *
+ ******************************************************************************************************************************/
+class CANFunctionSendRawBase : public CANFunctionBase
+{
+public:
+    CANFunctionSendRawBase(CAN_function_id_t id, CANObject *parent,
+                           CAN_function_handler_t external_handler = nullptr,
+                           CANFunctionBase *next_ok_function = nullptr,
+                           CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionSendRawBase(){};
+
+protected:
+    // validates states of all companion functions
+    // return false if mismatch states is detected
+    // return true if all states are correct
+    virtual bool _functions_family_state_validator() = 0;
+
+    // validates common conditions of the functions family before _send_raw_handler() call
+    virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override final;
+
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) = 0;
+
+    // it sets states of all family of send raw functions after _send_raw_handler() call
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) = 0;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendInit: function which starts send raw data sequence
+ *
+ ******************************************************************************************************************************/
+class CANFunctionSendInit : public CANFunctionSendRawBase
+{
+public:
+    CANFunctionSendInit(CANObject *parent,
+                        CAN_function_handler_t external_handler = nullptr,
+                        CANFunctionBase *next_ok_function = nullptr,
+                        CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionSendInit(){};
+
+protected:
+    virtual bool _functions_family_state_validator() override;
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkStart: it initiates the process of chunk receiving
+ *
+ ******************************************************************************************************************************/
+class CANFunctionChunkStart : public CANFunctionSendRawBase
+{
+public:
+    CANFunctionChunkStart(CANObject *parent,
+                          CAN_function_handler_t external_handler = nullptr,
+                          CANFunctionBase *next_ok_function = nullptr,
+                          CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionChunkStart(){};
+
+protected:
+    virtual bool _functions_family_state_validator() override;
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkData: it receives small portion of chunk data (can frame with data)
+ *
+ ******************************************************************************************************************************/
+class CANFunctionChunkData : public CANFunctionSendRawBase
+{
+public:
+    CANFunctionChunkData(CANObject *parent,
+                         CAN_function_handler_t external_handler = nullptr,
+                         CANFunctionBase *next_ok_function = nullptr,
+                         CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionChunkData(){};
+
+protected:
+    virtual bool _functions_family_state_validator() override;
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkEnd: it finalizes the process of chunk receiving
+ *
+ ******************************************************************************************************************************/
+class CANFunctionChunkEnd : public CANFunctionSendRawBase
+{
+public:
+    CANFunctionChunkEnd(CANObject *parent,
+                        CAN_function_handler_t external_handler = nullptr,
+                        CANFunctionBase *next_ok_function = nullptr,
+                        CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionChunkEnd(){};
+
+protected:
+    virtual bool _functions_family_state_validator() override;
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendFinish: finalizes send raw data sequence
+ *
+ ******************************************************************************************************************************/
+class CANFunctionSendFinish : public CANFunctionSendRawBase
+{
+public:
+    CANFunctionSendFinish(CANObject *parent,
+                          CAN_function_handler_t external_handler = nullptr,
+                          CANFunctionBase *next_ok_function = nullptr,
+                          CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionSendFinish(){};
+
+protected:
+    virtual bool _functions_family_state_validator() override;
+    virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
+    virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
 };
 
 #endif // CANFUNCTION_H

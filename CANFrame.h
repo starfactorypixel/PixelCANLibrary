@@ -42,6 +42,7 @@ public:
 
     static const uint8_t get_max_data_length();
     uint8_t *get_data_pointer();
+
     bool copy_frame_data_to(uint8_t *destination, uint8_t max_dest_length);
 
     const bool has_data();

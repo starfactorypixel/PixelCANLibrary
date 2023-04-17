@@ -127,6 +127,10 @@ DataField *CANObject::add_data_field(data_field_t type, void *data, uint32_t arr
         new_data_field = new DataFieldUint32(data, array_item_count);
         break;
 
+    case DF_RAW_DATA_ARRAY:
+        new_data_field = new DataFieldRawData(data, array_item_count);
+        break;
+
     case DF_UNKNOWN:
     default:
         break;
@@ -224,7 +228,6 @@ const char *CANObject::get_state_name()
 bool CANObject::is_state_ok()
 {
     return get_state() == COS_OK;
-    // return ((get_state()) & (1<<(7)));  // check if bit 7 is set
 }
 
 void CANObject::_set_state(can_object_state_t state)
@@ -339,18 +342,18 @@ DataField *CANObject::get_first_erroneous_data_field()
 
 // if function already exists and it has responding or blended type then existing one will be returned
 // for automatic and indirect functions there are no such limitations
-CANFunctionBase *CANObject::add_function(CAN_function_id_t id)
+CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 {
-    bool is_responding_function = CANFunctionBase::is_responding_by_func_id(id);
+    bool is_responding_function = CANFunctionBase::is_responding_by_func_id(func_id);
 
-    if (is_responding_function && has_function(id))
+    if (is_responding_function && has_function(func_id))
     {
         // return existing one only for responding or blended functions
-        return get_function(id);
+        return get_function(func_id);
     }
 
     CANFunctionBase *cf = nullptr;
-    switch (id)
+    switch (func_id)
     {
     case CAN_FUNC_SET_IN:
         cf = new CANFunctionSet(this);
@@ -358,14 +361,6 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t id)
         cf->set_next_ok_function(add_function(CAN_FUNC_SET_OUT_OK));
         // Next Error handler
         cf->set_next_err_function(add_function(CAN_FUNC_SET_OUT_ERR));
-        break;
-
-    case CAN_FUNC_REQUEST_IN:
-        cf = new CANFunctionRequest(this);
-        // Next OK handler
-        cf->set_next_ok_function(add_function(CAN_FUNC_REQUEST_OUT_OK));
-        // Next Error handler
-        cf->set_next_err_function(add_function(CAN_FUNC_REQUEST_OUT_ERR));
         break;
 
     case CAN_FUNC_SET_OUT_OK:
@@ -378,6 +373,14 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t id)
         cf->set_id(CAN_FUNC_SET_OUT_ERR, "CANFunctionSimpleSender|set-error");
         break;
 
+    case CAN_FUNC_REQUEST_IN:
+        cf = new CANFunctionRequest(this);
+        // Next OK handler
+        cf->set_next_ok_function(add_function(CAN_FUNC_REQUEST_OUT_OK));
+        // Next Error handler
+        cf->set_next_err_function(add_function(CAN_FUNC_REQUEST_OUT_ERR));
+        break;
+
     case CAN_FUNC_REQUEST_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
         cf->set_id(CAN_FUNC_REQUEST_OUT_OK, "CANFunctionSimpleSender|request-ok");
@@ -388,12 +391,84 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t id)
         cf->set_id(CAN_FUNC_REQUEST_OUT_ERR, "CANFunctionSimpleSender|request-error");
         break;
 
+    case CAN_FUNC_SEND_RAW_INIT_IN:
+        cf = new CANFunctionSendInit(this);
+        // next OK and ERROR handlers are created by constructor
+        break;
+
+    case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_OK, "CANFunctionSimpleSender|send raw init-ok");
+        break;
+
+    case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_ERR, "CANFunctionSimpleSender|send raw init-error");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
+        cf = new CANFunctionChunkStart(this);
+        // next OK and ERROR handlers are created by constructor
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK, "CANFunctionSimpleSender|chunk start-ok");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR, "CANFunctionSimpleSender|chunk start-error");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
+        cf = new CANFunctionChunkData(this);
+        // next ERROR handler is created by constructor
+        // next OK handler is forbidden
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR, "CANFunctionSimpleSender|chunk data-error");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
+        cf = new CANFunctionChunkEnd(this);
+        // next OK and ERROR handlers are created by constructor
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK, "CANFunctionSimpleSender|chunk end-ok");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR, "CANFunctionSimpleSender|chunk end-error");
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_IN:
+        cf = new CANFunctionSendFinish(this);
+        // next OK and ERROR handlers are created by constructor
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK, "CANFunctionSimpleSender|send raw finish-ok");
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
+        cf = new CANFunctionSimpleSender(this);
+        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR, "CANFunctionSimpleSender|send raw finish-error");
+        break;
+
     case CAN_FUNC_TIMER_NORMAL:
         cf = new CANFunctionTimerNormal(this, UINT32_MAX);
         break;
 
     case CAN_FUNC_TIMER_ATTENTION:
     case CAN_FUNC_TIMER_CRITICAL:
+        #warning 'Attention' and 'Critical' timers are not implemented because there is no difference with 'Normal' timer. Need more info.
         break;
 
     case CAN_FUNC_EVENT_ERROR:
@@ -498,9 +573,8 @@ bool CANObject::process_incoming_frame(CANFrame &can_frame)
 
     for (CANFunctionBase *i : _functions_list)
     {
-        // TODO: is there correct checking of enabled function state?
         if (i->get_id() == can_frame.get_function_id() && i->is_responding_function())
-            i->process(&can_frame);
+            return i->process(&can_frame);
     }
     return true;
 }

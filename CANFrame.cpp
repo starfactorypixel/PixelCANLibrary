@@ -216,6 +216,62 @@ void CANFrame::_frame_func_to_string(char *dest_string)
         strcpy(dest_string, "CAN_FUNC_REQUEST_OUT_ERR");
         break;
 
+    case CAN_FUNC_SEND_RAW_INIT_IN:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_INIT_IN");
+        break;
+
+    case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_INIT_OUT_OK");
+        break;
+
+    case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_INIT_OUT_ERR");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_START_IN");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_DATA_IN");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_END_IN");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK");
+        break;
+
+    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR");
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_IN:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_FINISH_IN");
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_FINISH_OUT_OK");
+        break;
+
+    case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
+        strcpy(dest_string, "CAN_FUNC_SEND_RAW_FINISH_OUT_ERR");
+        break;
+
     case CAN_FUNC_TIMER_NORMAL:
         strcpy(dest_string, "CAN_FUNC_TIMER_NORMAL");
         break;
@@ -226,6 +282,10 @@ void CANFrame::_frame_func_to_string(char *dest_string)
 
     case CAN_FUNC_TIMER_CRITICAL:
         strcpy(dest_string, "CAN_FUNC_TIMER_CRITICAL");
+        break;
+
+    case CAN_FUNC_SIMPLE_SENDER:
+        strcpy(dest_string, "CAN_FUNC_SIMPLE_SENDER");
         break;
 
     case CAN_FUNC_EVENT_ERROR:

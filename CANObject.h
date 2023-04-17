@@ -43,7 +43,6 @@ public:
     DataField *add_data_field(data_field_t type, void *data, uint32_t array_item_count = 1);
     bool delete_data_field(uint8_t index);
     DataField *get_data_field(uint8_t index);
-    //bool has_data_fields_alarm();
 
     uint8_t calculate_all_data_size();
 
@@ -54,7 +53,7 @@ public:
 
     // if function already exists and it has responding or blended type then existing one will be returned
     // for automatic and indirect functions there are no such limitations
-    CANFunctionBase *add_function(CAN_function_id_t id);
+    CANFunctionBase *add_function(CAN_function_id_t func_id);
     CANFunctionBase *get_function(CAN_function_id_t func_id);
     CANFunctionBase *get_function(CANFunctionBase &function);
     bool has_function(CAN_function_id_t func_id);

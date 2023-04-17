@@ -14,6 +14,12 @@
  ******************************************************************************************************************************/
 using get_ms_tick_function_t = uint32_t (*)();
 
+// Library classes forward declarations
+class DataField;
+class CANObject;
+class CANFrame;
+class CANFunctionBase;
+
 /******************************************************************************************************************************
  *
  * DataField related data types
@@ -42,14 +48,26 @@ enum data_field_t : uint8_t
     DF_UINT16 = 0x04,
     DF_INT32 = 0x05,
     DF_UINT32 = 0x06,
+    DF_RAW_DATA_ARRAY = 0x07,
 };
 
 enum data_field_state_t : uint8_t
 {
     DFS_OK = 0x00,
-    //DFS_ALARM = 0x0F,
     DFS_ERROR = 0xFF,
 };
+
+// external handlers for raw data fields
+// free space checker
+using raw_data_free_space_handler_t = bool (*)(uint32_t size_needed);
+// open new temp file for writing
+using raw_data_open_tmp_file_handler_t = bool (*)();
+// write chunk
+using raw_data_write_chunk_handler_t = bool (*)(uint8_t chunk_size, uint8_t *chunk_data);
+// close temp file and rename
+using raw_data_close_and_rename_file_handler_t = bool (*)(uint8_t file_code);
+// abort all
+using raw_data_abort_operations_handler_t = bool (*)();
 
 /******************************************************************************************************************************
  *
@@ -67,6 +85,7 @@ enum can_frame_error_codes_t : uint8_t
     CAN_FRAME_OK = 0x00,
     CAN_FRAME_IS_NULL = 0x01,
     CAN_FRAME_SIZE_ERROR = 0x02,
+    CAN_FRAME_NOT_EXPECTED = 0x0E,
     CAN_FRAME_UNKNOWN_ERROR = 0xFF,
 };
 
@@ -82,15 +101,6 @@ enum can_object_state_t : uint8_t
     COS_DATA_BUFFER_SIZE_ERROR = 0x02,
     COS_UNKNOWN_ERROR = 0xFF,
 };
-/*
-enum can_object_state_t : uint8_t
-{   // the most significant bit is the error flag
-    COS_OK = 0b00000000,
-    COS_DATA_FIELD_ERROR = 0b10000001,
-    COS_LOCAL_DATA_BUFFER_SIZE_ERROR = 0b10000010,
-    COS_UNKNOWN_ERROR = 0b10000000,
-};
-*/
 
 /******************************************************************************************************************************
  *
@@ -103,11 +113,6 @@ enum can_object_state_t : uint8_t
  * CANFunction related types
  *
  ******************************************************************************************************************************/
-// CAN functon handler
-class CANObject;
-class CANFrame;
-class CANFunctionBase;
-
 // CAN Function result codes
 enum CAN_function_result_t : uint8_t
 {
@@ -184,12 +189,20 @@ enum CAN_function_type_t : uint8_t
 // CAN Function state codes
 enum CAN_function_state_t : uint8_t
 {
-    // function is OFF: it doesn't work, doesn't send any error replay
+    // function is OFF: it doesn't work, doesn't send any error response
     // for example: timer is stopped; event is suppressed
-    CAN_FS_STOPPED = 0x00,
+    CAN_FS_DISABLED = 0x00,
 
-    // function is working in normal mode
+    // function is working in normal mode, doing some stuff and reacts to the inputs
     CAN_FS_ACTIVE = 0x01,
+
+    // function is paused, it responds to the incoming calls with error
+    // this state is useful for state machine implementation, when several functions
+    // need to be called in the specified order
+    CAN_FS_SUSPENDED = 0x02,
+
+    // ATTENTION: only for automated tests purpose, may be deleted after release
+    CAN_FS_IGNORED = 0xFF,
 };
 
 // CAN Function error codes
@@ -198,6 +211,18 @@ enum CAN_function_error_t : uint8_t
     CAN_FUNC_ERROR_NO_EXTERNAL_HANDLER = 0x01,
     CAN_FUNC_ERROR_UNKNOWN_SETTER_ERROR = 0x02,
     CAN_FUNC_ERROR_READONLY_OBJECT = 0x03, // only objects with exactly one data field are writable
+    CAN_FUNC_ERROR_MISSING_NECESSARY_FUNCTION = 0x04,
+    CAN_FUNC_ERROR_FUNCTION_UNAVAILABLE = 0x05,
+    CAN_FUNC_ERROR_FILE_CODE = 0x06,
+    CAN_FUNC_ERROR_DATA_SIZE = 0x07,
+    CAN_FUNC_ERROR_INCORRECT_CHUNK_INDEX = 0x08,
+    CAN_FUNC_ERROR_CHUNK_SIZE = 0x09,
+    CAN_FUNC_ERROR_CHUNK_COUNT = 0x0A,
+    CAN_FUNC_ERROR_HAVE_NOT_FREE_SPACE = 0x0B,
+    CAN_FUNC_ERROR_WRITE_STARTING = 0x0C,
+    CAN_FUNC_ERROR_START_NEW_CHUNK = 0x0D,
+    CAN_FUNC_ERROR_CHUNK_SAVING = 0x0E,
+    CAN_FUNC_ERROR_WRITE_FINISH = 0x0F,
 };
 
 /******************************************************************************************************************************
@@ -205,7 +230,7 @@ enum CAN_function_error_t : uint8_t
  * Pixel related types
  *
  ******************************************************************************************************************************/
-enum pixel_error_codes_t : uint8_t
+enum pixel_error_section_t : uint8_t
 {
     PIX_ERR_NONE = 0x00,
     PIX_ERR_CAN_FRAME = 0x01,
@@ -213,7 +238,9 @@ enum pixel_error_codes_t : uint8_t
     PIX_ERR_DATA_FIELD = 0x03,
     PIX_ERR_FUNCTION = 0x04,
     PIX_ERR_CAN_MANAGER = 0x05,
-    //PIX_ERR_CAN_RAW_RX = 0x06,
+
+    // not an error, just a flag that several frames was missed during the send raw process
+    PIX_ERR_SEND_RAW_MISSED_FRAMES = 0xFF,
 };
 
 #endif // CAN_COMMON_H

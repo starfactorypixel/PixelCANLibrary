@@ -124,9 +124,19 @@ void CANFunctionBase::enable()
     _set_state(CAN_FS_ACTIVE);
 }
 
+void CANFunctionBase::suspend()
+{
+    _set_state(CAN_FS_SUSPENDED);
+}
+
 bool CANFunctionBase::is_active()
 {
     return get_state() != CAN_FS_DISABLED;
+}
+
+bool CANFunctionBase::is_suspended()
+{
+    return get_state() == CAN_FS_SUSPENDED;
 }
 
 CAN_function_state_t CANFunctionBase::get_state()
@@ -143,7 +153,7 @@ const char *CANFunctionBase::get_state_name()
 
     case CAN_FS_ACTIVE:
         return _state_function_active;
-    
+
     case CAN_FS_SUSPENDED:
         return _state_function_suspended;
 
@@ -292,19 +302,25 @@ void CANFunctionBase::print(const char *prefix)
         has_name() ? get_name() : "noname", get_type_name(), get_state_name());
 }
 
-void CANFunctionBase::_fill_error_can_frame(CANFrame &can_frame, pixel_error_codes_t error_code, uint8_t additional_error_code)
+void CANFunctionBase::_fill_error_can_frame(CANFrame &can_frame, pixel_error_section_t error_section, uint8_t error_code)
 {
-    uint8_t error_data[CAN_MAX_PAYLOAD] = {0};
-    error_data[0] = get_id(); // by default id will be rewrited by sender function
+    struct __attribute__((__packed__)) error_frame_data_t
+    {
+        CAN_function_id_t func_id;
+        pixel_error_section_t error_section;
+        uint8_t error_code;
+    };
 
-    uint8_t idx = 1;
-    memcpy(&(error_data[idx]), &error_code, sizeof(error_code));
-    idx += sizeof(error_code);
-    memcpy(&(error_data[idx]), &additional_error_code, sizeof(additional_error_code));
-    idx += sizeof(additional_error_code);
+    uint8_t error_data[CAN_MAX_PAYLOAD] = {0};
+    error_frame_data_t *error_structured = (error_frame_data_t *)error_data;
+
+    error_structured->func_id = get_id(); // default behaviour: id will be rewrited by sender function
+
+    error_structured->error_section = error_section;
+    error_structured->error_code = error_code;
 
     can_frame.clear_frame();
-    can_frame.set_frame(get_parent()->get_id(), error_data, idx);
+    can_frame.set_frame(get_parent()->get_id(), error_data, sizeof(error_frame_data_t));
 }
 
 /******************************************************************************************************************************
@@ -430,8 +446,6 @@ CAN_function_result_t CANFunctionRequest::_default_handler(CANFrame *can_frame)
         return CAN_RES_NEXT_OK;
     }
 
-    // it is possible that CANObject.update_local_data() returns false
-    // in this case we will send PIX_ERR_CAN_OBJECT error with additional error code = COS_OK
     _fill_error_can_frame(*can_frame, PIX_ERR_CAN_OBJECT, co_state);
     return CAN_RES_NEXT_ERR;
 }
@@ -468,11 +482,13 @@ CAN_function_result_t CANFunctionSimpleSender::_default_handler(CANFrame *can_fr
         result = CAN_RES_NEXT_OK;
     }
 
+    CANObject &co = *get_parent();
+    CANManager &cm = *co.get_parent();
+
+    cf.set_id(co.get_id());
     cf.set_function_id(get_id());
     cf.print("CANFunctionSimpleSender: ");
 
-    CANObject &co = *get_parent();
-    CANManager &cm = *co.get_parent();
     cm.add_tx_queue_item(cf);
 
     return result;
@@ -603,6 +619,787 @@ CAN_function_result_t CANFunctionSet::_default_handler(CANFrame *can_frame)
 {
     // if the default handler is called then there is no external handler specified
     // this is an error situation
-    _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_NO_EXTERNAL_HANDLER);
+    if (can_frame != nullptr)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_NO_EXTERNAL_HANDLER);
+    }
     return CAN_RES_NEXT_ERR;
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendRawBase: base function for all the family of the send raw functions
+ *
+ ******************************************************************************************************************************/
+CANFunctionSendRawBase::CANFunctionSendRawBase(CAN_function_id_t id, CANObject *parent, CAN_function_handler_t external_handler,
+                                               CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionBase(id, parent, external_handler, next_ok_function, next_err_function)
+{
+}
+
+// validates common conditions of the functions family before _send_raw_handler() call
+CAN_function_result_t CANFunctionSendRawBase::_default_handler(CANFrame *can_frame)
+{
+    if (can_frame == nullptr)
+        return CAN_RES_NEXT_ERR;
+
+    can_frame->print("CANFunctionSendRawBase [incoming frame]: ");
+
+    if (this->is_suspended())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_FUNCTION_UNAVAILABLE);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    CANObject &co = *get_parent();
+    can_object_state_t co_state = co.update_state();
+
+    if (!co.is_state_ok())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_OBJECT, co_state);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (co.get_data_fields_count() != 1)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_READONLY_OBJECT);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    DataField *df = co.get_data_field(0);
+    if (df == nullptr || df->get_source_type() != DF_RAW_DATA_ARRAY)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_OBJECT, COS_DATA_FIELD_ERROR);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    uint8_t func_counter = 0;
+    CANFunctionBase *can_func = nullptr;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_INIT_IN
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_IN);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_INIT_OUT_OK
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_INIT_OUT_ERR
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_START_IN
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_DATA_IN
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_END_IN
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_FINISH_IN
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_FINISH_IN);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_FINISH_OUT_OK
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    // CANObject should have CAN_FUNC_SEND_RAW_FINISH_OUT_ERR
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
+    func_counter += (can_func == nullptr) ? 0 : 1;
+
+    if (func_counter != 14 || !this->_functions_family_state_validator())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_MISSING_NECESSARY_FUNCTION);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    CAN_function_result_t send_raw_handler_result = this->_send_raw_handler(can_frame);
+    this->_set_functions_family_states(send_raw_handler_result);
+    return send_raw_handler_result;
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendInit: function which starts send raw data sequence
+ *
+ ******************************************************************************************************************************/
+CANFunctionSendInit::CANFunctionSendInit(CANObject *parent, CAN_function_handler_t external_handler,
+                                         CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_INIT_IN, parent, external_handler, next_ok_function, next_err_function)
+{
+    set_type(CAN_FT_RESPONDING);
+    set_name("CANFunctionSendInit");
+    enable();
+
+    if (parent == nullptr)
+        return;
+
+    CANObject &can_object = *parent;
+
+    CANFunctionBase *cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
+    }
+    set_next_ok_function(cfunc);
+
+    cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
+    }
+    set_next_err_function(cfunc);
+}
+
+bool CANFunctionSendInit::_functions_family_state_validator()
+{
+    CANObject &co = *this->get_parent();
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->is_suspended())
+        return false;
+
+    co.get_function(CAN_FUNC_SEND_RAW_FINISH_IN)->enable();
+
+    return true;
+}
+
+CAN_function_result_t CANFunctionSendInit::_send_raw_handler(CANFrame *can_frame)
+{
+    struct __attribute__((__packed__)) incoming_can_frame_data_struct_t
+    {
+        CAN_function_id_t func_id;
+        uint8_t offering_chunk_size;
+        uint32_t total_size;
+        uint8_t file_code;
+    };
+
+    CANObject &co = *get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+    raw_data_field->cancel_all();
+
+    can_frame->print("CANFunctionSendInit [incoming frame]: ");
+
+    if (can_frame->get_data_length() != sizeof(incoming_can_frame_data_struct_t))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_SIZE_ERROR);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    incoming_can_frame_data_struct_t *can_frame_data = (incoming_can_frame_data_struct_t *)can_frame->get_data_pointer();
+
+    if (can_frame_data->offering_chunk_size == 0 || can_frame_data->total_size < can_frame_data->offering_chunk_size)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_DATA_SIZE);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (!raw_data_field->has_free_space(can_frame_data->total_size))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_HAVE_NOT_FREE_SPACE);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (can_frame_data->file_code == 0)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_FILE_CODE);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    uint8_t final_chunk_size = (can_frame_data->offering_chunk_size > raw_data_field->get_data_byte_array_length()) ? raw_data_field->get_data_byte_array_length() : can_frame_data->offering_chunk_size;
+
+    if (!raw_data_field->start_data_writing(can_frame_data->file_code, can_frame_data->total_size, final_chunk_size))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_WRITE_STARTING);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    // outgoing frame generation
+    can_frame->clear_frame();
+    can_frame->set_frame(co.get_id(), 2, /*func id will be rewrited by sender*/ 0, final_chunk_size);
+
+    return CAN_RES_NEXT_OK;
+}
+
+void CANFunctionSendInit::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
+{
+    CANFunctionBase *can_func = nullptr;
+    CANObject &co = *this->get_parent();
+
+    // all functions exist, so we don't need to check if can_func == null
+
+    // own state
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? this->suspend() : this->enable();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->enable() : can_func->suspend();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN);
+    can_func->suspend();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
+    can_func->suspend();
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkStart: it initiates the process of chunk receiving
+ *
+ ******************************************************************************************************************************/
+CANFunctionChunkStart::CANFunctionChunkStart(CANObject *parent, CAN_function_handler_t external_handler,
+                                             CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_START_IN, parent, external_handler, next_ok_function, next_err_function)
+{
+    set_type(CAN_FT_RESPONDING);
+    set_name("CANFunctionChunkStart");
+    suspend(); // initially suspended, should be enabled by other functions
+
+    if (parent == nullptr)
+        return;
+
+    CANObject &can_object = *parent;
+
+    CANFunctionBase *cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
+    }
+    set_next_ok_function(cfunc);
+
+    cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
+    }
+    set_next_err_function(cfunc);
+}
+
+bool CANFunctionChunkStart::_functions_family_state_validator()
+{
+    CANObject &co = *this->get_parent();
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_INIT_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->is_suspended())
+        return false;
+
+    co.get_function(CAN_FUNC_SEND_RAW_FINISH_IN)->enable();
+
+    return true;
+}
+
+CAN_function_result_t CANFunctionChunkStart::_send_raw_handler(CANFrame *can_frame)
+{
+    struct __attribute__((__packed__)) incoming_can_frame_data_struct_t
+    {
+        CAN_function_id_t func_id;
+        uint16_t chunk_index;
+        uint16_t chunks_count;
+        uint8_t chunk_size;
+    };
+
+    CANObject &co = *get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+
+    can_frame->print("CANFunctionChunkStart [incoming frame]: ");
+
+    if (can_frame->get_data_length() != sizeof(incoming_can_frame_data_struct_t))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_SIZE_ERROR);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    incoming_can_frame_data_struct_t *can_frame_data = (incoming_can_frame_data_struct_t *)can_frame->get_data_pointer();
+
+    if (can_frame_data->chunk_size > raw_data_field->get_data_byte_array_length())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_CHUNK_SIZE);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    // expected that DataField will do current_chunk_index++ on EndOfChunk function call
+    if (can_frame_data->chunk_index != raw_data_field->get_current_chunk_index())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_INCORRECT_CHUNK_INDEX);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (raw_data_field->get_chunks_count() != can_frame_data->chunks_count)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_CHUNK_COUNT);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (!raw_data_field->start_new_chunk_accumulation(can_frame_data->chunk_index, can_frame_data->chunks_count, can_frame_data->chunk_size))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_START_NEW_CHUNK);
+        return CAN_RES_NEXT_ERR;
+    }
+
+    can_frame->clear_frame();
+    can_frame->set_frame(co.get_id(), 1, /*func id will be rewrited by sender*/ 0);
+
+    return CAN_RES_NEXT_OK;
+}
+
+void CANFunctionChunkStart::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
+{
+    CANFunctionBase *can_func = nullptr;
+    CANObject &co = *this->get_parent();
+
+    // all functions exist, so we don't need to check if can_func == null
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
+
+    // own state
+    this->suspend();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->enable() : can_func->suspend();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->enable() : can_func->suspend();
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkData: it receives small portion of chunk data (can frame with data)
+ *
+ ******************************************************************************************************************************/
+CANFunctionChunkData::CANFunctionChunkData(CANObject *parent, CAN_function_handler_t external_handler,
+                                           CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN, parent, external_handler, next_ok_function, next_err_function)
+{
+    set_type(CAN_FT_RESPONDING);
+    set_name("CANFunctionChunkData");
+    suspend(); // initially suspended, should be enabled by other functions
+
+    if (parent == nullptr)
+        return;
+
+    CANObject &can_object = *parent;
+
+    CANFunctionBase *cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
+    }
+    set_next_err_function(cfunc);
+    set_next_ok_function(nullptr);
+}
+
+bool CANFunctionChunkData::_functions_family_state_validator()
+{
+    CANObject &co = *this->get_parent();
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_INIT_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->is_active())
+        return false;
+
+    co.get_function(CAN_FUNC_SEND_RAW_FINISH_IN)->enable();
+
+    return true;
+}
+
+CAN_function_result_t CANFunctionChunkData::_send_raw_handler(CANFrame *can_frame)
+{
+    const uint8_t MAX_FRAME_DATA_LENGTH = 6;
+
+    struct __attribute__((__packed__)) incoming_can_frame_data_struct_t
+    {
+        CAN_function_id_t func_id;
+        uint8_t frame_index;
+        uint8_t data[MAX_FRAME_DATA_LENGTH];
+    };
+
+    CANObject &co = *get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+    incoming_can_frame_data_struct_t *can_frame_data = (incoming_can_frame_data_struct_t *)can_frame->get_data_pointer();
+
+    can_frame->print("CANFunctionChunkData [incoming frame]: ");
+
+    if (!raw_data_field->is_waiting_for_frame())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_NOT_EXPECTED);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (!raw_data_field->is_waiting_for_missed_frame() && raw_data_field->get_expected_frame_index() > can_frame_data->frame_index)
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_NOT_EXPECTED);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (can_frame->get_data_length() < 3 || // 3 bytes is a minimal correct frame data length
+        (can_frame_data->frame_index < raw_data_field->get_frames_count() - 1 && can_frame->get_data_length() != MAX_FRAME_DATA_LENGTH + 2))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_SIZE_ERROR);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    raw_data_field->process_new_frame(can_frame_data->frame_index, can_frame_data->data, can_frame->get_data_length() - 2);
+    // raw_data_field->copy_data_from(can_frame_data->data, can_frame->get_data_length() - 2, can_frame_data->frame_index * MAX_FRAME_DATA_LENGTH);
+
+    can_frame->clear_frame();
+    // this function doesn't assume an OK-answer
+
+    return CAN_RES_NEXT_OK;
+}
+
+void CANFunctionChunkData::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
+{
+    CANFunctionBase *can_func = nullptr;
+    CANObject &co = *this->get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+
+    // all functions exist, so we don't need to check if can_func == null
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
+
+    co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN)->suspend();
+
+    // don't suspend till all data frames are received
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN);
+    (send_raw_handler_result != CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
+
+    // the EndOfChunk function must also be enabled permanently during the data receiving
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
+    (send_raw_handler_result != CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionChunkEnd: it finalizes the process of chunk receiving
+ *
+ ******************************************************************************************************************************/
+CANFunctionChunkEnd::CANFunctionChunkEnd(CANObject *parent, CAN_function_handler_t external_handler,
+                                         CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_END_IN, parent, external_handler, next_ok_function, next_err_function)
+{
+    set_type(CAN_FT_RESPONDING);
+    set_name("CANFunctionChunkEnd");
+    suspend(); // initially suspended, should be enabled by other functions
+
+    if (parent == nullptr)
+        return;
+
+    CANObject &can_object = *parent;
+
+    CANFunctionBase *cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
+    }
+    set_next_ok_function(cfunc);
+
+    cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
+    }
+    set_next_err_function(cfunc);
+}
+
+bool CANFunctionChunkEnd::_functions_family_state_validator()
+{
+    CANObject &co = *this->get_parent();
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_INIT_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN)->is_suspended())
+        return false;
+
+    if (!co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN)->is_active())
+        return false;
+
+    co.get_function(CAN_FUNC_SEND_RAW_FINISH_IN)->enable();
+
+    return true;
+}
+
+CAN_function_result_t CANFunctionChunkEnd::_send_raw_handler(CANFrame *can_frame)
+{
+    struct __attribute__((__packed__)) incoming_can_frame_data_struct_t
+    {
+        CAN_function_id_t func_id;
+        uint16_t chunk_index;
+        uint16_t chunks_count;
+        uint8_t chunk_size;
+    };
+
+    struct __attribute__((__packed__)) ok_response_t
+    {
+        CAN_function_id_t func_id;
+        uint16_t delay;
+    };
+
+    struct __attribute__((__packed__)) err_frames_missing_t
+    {
+        CAN_function_id_t func_id;
+        uint8_t error_section;
+        uint8_t num_of_broken_frames;
+        uint8_t broken_frame_index;
+    };
+
+    CANObject &co = *get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+
+    can_frame->print("CANFunctionChunkEnd [incoming frame]: ");
+
+    if (can_frame->get_data_length() != sizeof(incoming_can_frame_data_struct_t))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_SIZE_ERROR);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    incoming_can_frame_data_struct_t *can_frame_data = (incoming_can_frame_data_struct_t *)can_frame->get_data_pointer();
+
+    if (can_frame_data->chunk_size > raw_data_field->get_data_byte_array_length())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_CHUNK_SIZE);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (can_frame_data->chunk_index != raw_data_field->get_current_chunk_index())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_INCORRECT_CHUNK_INDEX);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (!raw_data_field->close_chunk_accumulation(can_frame_data->chunk_size, can_frame_data->chunk_index, can_frame_data->chunks_count))
+    {
+        can_frame->clear_frame();
+        can_frame->set_id(co.get_id());
+        if (raw_data_field->is_waiting_for_missed_frame())
+        {
+            err_frames_missing_t *err_missed_frames = (err_frames_missing_t *)can_frame->get_data_pointer();
+            // func id will be rewrited by sender
+            // err_missed_frames->func_id = CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR;
+            err_missed_frames->num_of_broken_frames = raw_data_field->get_missed_frames_count();
+            err_missed_frames->broken_frame_index = *raw_data_field->get_missed_frame_index();
+            err_missed_frames->error_section = PIX_ERR_SEND_RAW_MISSED_FRAMES;
+            can_frame->set_data_length(sizeof(err_frames_missing_t));
+        }
+        else
+        {
+            _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_CHUNK_SAVING);
+            raw_data_field->cancel_all();
+            return CAN_RES_NEXT_ERR;
+        }
+    }
+    else
+    {
+        can_frame->clear_frame();
+        can_frame->set_id(co.get_id());
+        ok_response_t *ok_response = (ok_response_t *)can_frame->get_data_pointer();
+        // func id will be rewrited by sender
+        // ok_response->func_id = CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK;
+        ok_response->delay = raw_data_field->get_writing_delay();
+        can_frame->set_data_length(sizeof(ok_response_t));
+    }
+
+    return CAN_RES_NEXT_OK;
+}
+
+void CANFunctionChunkEnd::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
+{
+    CANFunctionBase *can_func = nullptr;
+    CANObject &co = *this->get_parent();
+
+    // all functions exist, so we don't need to check if can_func == null
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_INIT_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
+
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN);
+    (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->enable() : can_func->suspend();
+
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+    can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN);
+    if (send_raw_handler_result == CAN_RES_NEXT_OK)
+    {
+        can_func->suspend();
+    }
+    else
+    {
+        (raw_data_field->is_waiting_for_missed_frame()) ? can_func->enable() : can_func->suspend();
+    }
+
+    // own state
+    co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->suspend();
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionSendFinish: finalizes send raw data sequence
+ *
+ ******************************************************************************************************************************/
+CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_handler_t external_handler,
+                                             CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_FINISH_IN, parent, external_handler, next_ok_function, next_err_function)
+{
+    set_type(CAN_FT_RESPONDING);
+    set_name("CANFunctionSendFinish");
+    enable(); // should be enabled always
+
+    if (parent == nullptr)
+        return;
+
+    CANObject &can_object = *parent;
+
+    CANFunctionBase *cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
+    }
+    set_next_ok_function(cfunc);
+
+    cfunc = can_object.get_function(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
+    if (cfunc == nullptr)
+    {
+        cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
+    }
+    set_next_err_function(cfunc);
+}
+
+bool CANFunctionSendFinish::_functions_family_state_validator()
+{
+    CANObject &co = *this->get_parent();
+
+    // CAN_FUNC_SEND_RAW_FINISH_IN should work always
+    this->enable();
+
+    // state of other functions doesn't affect anithing
+
+    return true;
+}
+
+CAN_function_result_t CANFunctionSendFinish::_send_raw_handler(CANFrame *can_frame)
+{
+    // incoming CAN frame data structure
+    struct __attribute__((__packed__)) incoming_can_frame_data_struct_t
+    {
+        CAN_function_id_t func_id;
+        uint32_t total_size;
+        uint8_t file_code;
+    };
+
+    struct __attribute__((__packed__)) ok_response_t
+    {
+        CAN_function_id_t func_id;
+    };
+
+    CANObject &co = *get_parent();
+    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
+
+    can_frame->print("CANFunctionSendFinish [incoming frame]: ");
+
+    if (can_frame->get_data_length() != sizeof(incoming_can_frame_data_struct_t))
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_CAN_FRAME, CAN_FRAME_SIZE_ERROR);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    incoming_can_frame_data_struct_t *can_frame_data = (incoming_can_frame_data_struct_t *)can_frame->get_data_pointer();
+
+    if (can_frame_data->total_size != raw_data_field->get_expected_total_size())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_DATA_SIZE);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (can_frame_data->file_code != raw_data_field->get_file_code())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_FILE_CODE);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    if (!raw_data_field->complete_data_writing())
+    {
+        _fill_error_can_frame(*can_frame, PIX_ERR_FUNCTION, CAN_FUNC_ERROR_WRITE_FINISH);
+        raw_data_field->cancel_all();
+        return CAN_RES_NEXT_ERR;
+    }
+
+    can_frame->clear_frame();
+    can_frame->set_id(co.get_id());
+    can_frame->set_data_length(sizeof(ok_response_t));
+    // func id will be rewrited by sender
+    // can_frame->set_function_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
+
+    return CAN_RES_NEXT_OK;
+}
+
+void CANFunctionSendFinish::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
+{
+    CANFunctionBase *can_func = nullptr;
+    CANObject &co = *this->get_parent();
+
+    // all functions exist, so we don't need to check if can_func == null
+
+    co.get_function(CAN_FUNC_SEND_RAW_INIT_IN)->enable();
+
+    co.get_function(CAN_FUNC_SEND_RAW_CHUNK_START_IN)->suspend();
+
+    co.get_function(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN)->suspend();
+
+    co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->suspend();
+
+    // own state - CAN_FUNC_SEND_RAW_FINISH_IN
+    this->enable();
 }

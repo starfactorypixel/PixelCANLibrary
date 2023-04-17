@@ -13,9 +13,6 @@ bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, 
     DataField *df = nullptr;
     CANFunctionTimerNormal *func_timer_norm = nullptr;
     CANFunctionRequest *func_request = nullptr;
-    //CANFunctionSimpleEvent *func_event = nullptr;
-    //data_mapper_t min_val = {0};
-    //data_mapper_t max_val = {0};
 
     co = cm.add_can_object(can_id, "BlockInfo");
     df = co->add_data_field(DF_UINT8, &block_info.board_data_byte);
@@ -38,7 +35,6 @@ bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_he
 
     CANObject *co = nullptr;
     DataField *df = nullptr;
-    //CANFunctionTimerNormal *func_timer_norm = nullptr;
     CANFunctionRequest *func_request = nullptr;
     CANFunctionSimpleEvent *func_event = nullptr;
 
@@ -63,16 +59,9 @@ bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
     // *******************************************************************
 
     CANObject *co = nullptr;
-    //DataField *df = nullptr;
-    //CANFunctionTimerNormal *func_timer_norm = nullptr;
     CANFunctionRequest *func_request = nullptr;
-    //CANFunctionSimpleEvent *func_event = nullptr;
-    //data_mapper_t min_val = {0};
-    //data_mapper_t max_val = {0};
 
     co = cm.add_can_object(can_id, "BlockCfg");
-    // df = co->add_data_field(DF_UINT8, ??, ??);    // byte 1
-    // df = co->add_data_field(DF_UINT8, ??, 6);
     func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
     
     return true;
@@ -89,11 +78,7 @@ bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_erro
 
     CANObject *co = nullptr;
     DataField *df = nullptr;
-    //CANFunctionTimerNormal *func_timer_norm = nullptr;
     CANFunctionRequest *func_request = nullptr;
-    //CANFunctionSimpleEvent *func_event = nullptr;
-    //data_mapper_t min_val = {0};
-    //data_mapper_t max_val = {0};
 
     co = cm.add_can_object(can_id, "BlockError");
     df = co->add_data_field(DF_UINT8, &block_error.code);
