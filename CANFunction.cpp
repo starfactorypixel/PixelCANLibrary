@@ -20,7 +20,7 @@ CANFunctionBase::CANFunctionBase(CAN_function_id_t id,
                                  CAN_function_handler_t external_handler,
                                  CANFunctionBase *next_ok_function,
                                  CANFunctionBase *next_err_function)
-    : _id(id), _state(CAN_FS_DISABLED), _parent(parent), _type(CAN_FT_INDIRECT), _external_handler(external_handler),
+    : _id(id), _state(CAN_FS_DISABLED), _parent(parent), _external_handler(external_handler),
       _next_ok_function(next_ok_function), _next_err_function(next_err_function), _name(nullptr)
 {
 }
@@ -226,80 +226,18 @@ bool CANFunctionBase::process(CANFrame *can_frame)
     return result != CAN_RES_NONE;
 }
 
-bool CANFunctionBase::is_responding_function()
-{
-    return CAN_FT_RESPONDING == (get_type() & CAN_FT_RESPONDING);
-}
-
-bool CANFunctionBase::is_automatic_function()
-{
-    return CAN_FT_AUTOMATIC == (get_type() & CAN_FT_AUTOMATIC);
-}
-
 bool CANFunctionBase::is_indirect_function()
 {
-    return CAN_FT_INDIRECT == (get_type() & CAN_FT_INDIRECT);
-}
-
-void CANFunctionBase::set_type(CAN_function_type_t func_type)
-{
-    _type = func_type;
-}
-
-CAN_function_type_t CANFunctionBase::get_type()
-{
-    return _type;
-}
-
-const char *CANFunctionBase::get_type_name()
-{
-    switch (get_type())
-    {
-    case CAN_FT_RESPONDING:
-        return _type_function_responding;
-
-    case CAN_FT_AUTOMATIC:
-        return _type_function_automatic;
-
-    case CAN_FT_BLENDED:
-        return _type_function_blended;
-
-    case CAN_FT_INDIRECT:
-        return _type_function_indirect;
-
-    default:
-        return _value_unknown;
-    }
-}
-
-bool CANFunctionBase::is_responding_by_func_id(CAN_function_id_t id)
-{
-    switch (id)
-    {
-    case CAN_FUNC_SET_IN:
-    case CAN_FUNC_REQUEST_IN:
-        return true;
-
-    case CAN_FUNC_SET_OUT_OK:
-    case CAN_FUNC_SET_OUT_ERR:
-    case CAN_FUNC_REQUEST_OUT_OK:
-    case CAN_FUNC_REQUEST_OUT_ERR:
-    case CAN_FUNC_TIMER_NORMAL:
-    case CAN_FUNC_TIMER_ATTENTION:
-    case CAN_FUNC_TIMER_CRITICAL:
-    case CAN_FUNC_SIMPLE_SENDER:
-    case CAN_FUNC_EVENT_ERROR:
-
-    case CAN_FUNC_NONE:
-    default:
-        return false;
-    }
+    return !this->is_responding_function() && !this->is_automatic_function();
 }
 
 void CANFunctionBase::print(const char *prefix)
 {
-    LOG("%sFunction: id = 0x%02X (%s), type = %s, state = %s", prefix, get_id(),
-        has_name() ? get_name() : "noname", get_type_name(), get_state_name());
+    LOG("%sFunction: id = 0x%02X (%s), state = %s, responding = %s, automatic = %s, indirect = %s", prefix, get_id(),
+        has_name() ? get_name() : "noname", get_state_name(),
+        is_responding_function() ? "yes" : "no",
+        is_automatic_function() ? "yes" : "no",
+        is_indirect_function() ? "yes" : "no");
 }
 
 void CANFunctionBase::_fill_error_can_frame(CANFrame &can_frame, pixel_error_section_t error_section, uint8_t error_code)
@@ -337,7 +275,6 @@ CANFunctionTimerBase::CANFunctionTimerBase(CAN_function_id_t id,
     : CANFunctionBase(id, parent, external_handler, next_ok_function, next_err_function),
       _period_ms(period_ms), _last_action_tick(0)
 {
-    set_type(CAN_FT_AUTOMATIC);
 }
 
 bool CANFunctionTimerBase::_equals(CANFunctionBase const &other) const
@@ -359,6 +296,16 @@ void CANFunctionTimerBase::set_period(uint32_t period_ms)
 uint32_t CANFunctionTimerBase::get_period()
 {
     return _period_ms;
+}
+
+bool CANFunctionTimerBase::is_responding_function()
+{
+    return false;
+}
+
+bool CANFunctionTimerBase::is_automatic_function()
+{
+    return true;
 }
 
 CAN_function_result_t CANFunctionTimerBase::_default_handler(CANFrame *can_frame)
@@ -419,9 +366,18 @@ CANFunctionRequest::CANFunctionRequest(CANObject *parent, CAN_function_handler_t
                                        CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_REQUEST_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionRequest");
     enable();
+}
+
+bool CANFunctionRequest::is_responding_function()
+{
+    return true;
+}
+
+bool CANFunctionRequest::is_automatic_function()
+{
+    return false;
 }
 
 CAN_function_result_t CANFunctionRequest::_default_handler(CANFrame *can_frame)
@@ -461,9 +417,18 @@ CANFunctionSimpleSender::CANFunctionSimpleSender(CANObject *parent, CAN_function
                                                  CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_SIMPLE_SENDER, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_INDIRECT);
     set_name("CANFunctionSimpleSender");
     enable();
+}
+
+bool CANFunctionSimpleSender::is_responding_function()
+{
+    return false;
+}
+
+bool CANFunctionSimpleSender::is_automatic_function()
+{
+    return false;
 }
 
 CAN_function_result_t CANFunctionSimpleSender::_default_handler(CANFrame *can_frame)
@@ -547,9 +512,18 @@ CANFunctionSet::CANFunctionSet(CANObject *parent, CAN_function_handler_t externa
                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_SET_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionSet");
     enable();
+}
+
+bool CANFunctionSet::is_responding_function()
+{
+    return true;
+}
+
+bool CANFunctionSet::is_automatic_function()
+{
+    return false;
 }
 
 // should return CAN_RES_NEXT_OK for external handler call performing
@@ -635,6 +609,16 @@ CANFunctionSendRawBase::CANFunctionSendRawBase(CAN_function_id_t id, CANObject *
                                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(id, parent, external_handler, next_ok_function, next_err_function)
 {
+}
+
+bool CANFunctionSendRawBase::is_responding_function()
+{
+    return true;
+}
+
+bool CANFunctionSendRawBase::is_automatic_function()
+{
+    return false;
 }
 
 // validates common conditions of the functions family before _send_raw_handler() call
@@ -752,7 +736,6 @@ CANFunctionSendInit::CANFunctionSendInit(CANObject *parent, CAN_function_handler
                                          CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_INIT_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionSendInit");
     enable();
 
@@ -880,7 +863,6 @@ CANFunctionChunkStart::CANFunctionChunkStart(CANObject *parent, CAN_function_han
                                              CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_START_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionChunkStart");
     suspend(); // initially suspended, should be enabled by other functions
 
@@ -1009,7 +991,6 @@ CANFunctionChunkData::CANFunctionChunkData(CANObject *parent, CAN_function_handl
                                            CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionChunkData");
     suspend(); // initially suspended, should be enabled by other functions
 
@@ -1124,7 +1105,6 @@ CANFunctionChunkEnd::CANFunctionChunkEnd(CANObject *parent, CAN_function_handler
                                          CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_END_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionChunkEnd");
     suspend(); // initially suspended, should be enabled by other functions
 
@@ -1290,7 +1270,6 @@ CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_han
                                              CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_FINISH_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_type(CAN_FT_RESPONDING);
     set_name("CANFunctionSendFinish");
     enable(); // should be enabled always
 

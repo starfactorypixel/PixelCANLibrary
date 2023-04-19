@@ -173,19 +173,6 @@ enum CAN_function_id_t : uint8_t
     CAN_FUNC_EVENT_ERROR = 0xE6,
 };
 
-// function type { responding, automatic, blended, indirect }
-// Responding type - activated if incoming CAN frame received
-// Automatic type - activated by CANObject whenever the update() method is called.
-// Blended type - hybrid of responding and automatic; will be activated both by incoming CANFrame and by CANObject.update()
-// Indirect type - this function will never activated by CANFrames or CANObject.update(). It will be called by other functions only.
-enum CAN_function_type_t : uint8_t
-{ // it is actually a bit mask
-    CAN_FT_RESPONDING = 0b0001,
-    CAN_FT_AUTOMATIC = 0b0010,
-    CAN_FT_BLENDED = 0b0011,
-    CAN_FT_INDIRECT = 0b0100,
-};
-
 // CAN Function state codes
 enum CAN_function_state_t : uint8_t
 {

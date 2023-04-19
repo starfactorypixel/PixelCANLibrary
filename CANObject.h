@@ -51,7 +51,7 @@ public:
     bool is_state_ok();
     DataField *get_first_erroneous_data_field();
 
-    // if function already exists and it has responding or blended type then existing one will be returned
+    // if function already exists then existing one will be returned
     // for automatic and indirect functions there are no such limitations
     CANFunctionBase *add_function(CAN_function_id_t func_id);
     CANFunctionBase *get_function(CAN_function_id_t func_id);

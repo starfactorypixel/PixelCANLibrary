@@ -40,7 +40,7 @@ CANObject::~CANObject()
             delete i;
     }
     _functions_list.clear();
-    
+
     delete_name();
 }
 
@@ -340,13 +340,11 @@ DataField *CANObject::get_first_erroneous_data_field()
     return nullptr;
 }
 
-// if function already exists and it has responding or blended type then existing one will be returned
+// if function already exists then existing one will be returned
 // for automatic and indirect functions there are no such limitations
 CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 {
-    bool is_responding_function = CANFunctionBase::is_responding_by_func_id(func_id);
-
-    if (is_responding_function && has_function(func_id))
+    if (has_function(func_id))
     {
         // return existing one only for responding or blended functions
         return get_function(func_id);
@@ -468,7 +466,7 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_TIMER_ATTENTION:
     case CAN_FUNC_TIMER_CRITICAL:
-        #warning 'Attention' and 'Critical' timers are not implemented because there is no difference with 'Normal' timer. Need more info.
+#warning 'Attention' and 'Critical' timers are not implemented because there is no difference with 'Normal' timer. Need more info.
         break;
 
     case CAN_FUNC_EVENT_ERROR:

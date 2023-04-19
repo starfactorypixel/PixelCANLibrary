@@ -74,18 +74,13 @@ public:
     bool process(CANFrame *can_frame = nullptr);
 
     // function type { responding, automatic, blended, indirect }
-    // Responding type - activated if incoming CAN frame received
-    // Automatic type - activated by CANObject.update() method
+    // Responding type - it will be activated by incoming CAN frame
+    // Automatic type - it will be activated by CANObject.update() method
     // Blended type - hybrid of responding and automatic types; will be activated both by incoming CANFrame and by CANObject.update()
-    // Indirect type - this function will never activated by CANFrames or CANObject.update(). It will be called by other functions only.
-    bool is_responding_function();
-    bool is_automatic_function();
+    // Indirect type - this function will never be activated by CANFrames or CANObject.update(). It will be called by other functions only.
+    virtual bool is_responding_function() = 0;
+    virtual bool is_automatic_function() = 0;
     bool is_indirect_function();
-    void set_type(CAN_function_type_t func_type);
-    CAN_function_type_t get_type();
-    const char *get_type_name();
-
-    static bool is_responding_by_func_id(CAN_function_id_t id);
 
     virtual void print(const char *prefix);
 
@@ -117,7 +112,6 @@ private:
     CAN_function_id_t _id = CAN_FUNC_NONE;
     CAN_function_state_t _state = CAN_FS_DISABLED;
     CANObject *_parent = nullptr;
-    CAN_function_type_t _type = CAN_FT_INDIRECT;
 
     // external function handler
     CAN_function_handler_t _external_handler = nullptr;
@@ -160,6 +154,9 @@ public:
 
     void set_period(uint32_t period_ms);
     uint32_t get_period();
+
+    virtual bool is_responding_function();
+    virtual bool is_automatic_function();
 
 protected:
     // virtual method for correct and systematic comparison of derived classes
@@ -212,6 +209,9 @@ public:
 
     virtual ~CANFunctionRequest(){};
 
+    virtual bool is_responding_function();
+    virtual bool is_automatic_function();
+
 protected:
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
 };
@@ -232,6 +232,9 @@ public:
                             CANFunctionBase *next_err_function = nullptr);
 
     virtual ~CANFunctionSimpleSender(){};
+
+    virtual bool is_responding_function();
+    virtual bool is_automatic_function();
 
 protected:
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
@@ -282,6 +285,9 @@ public:
 
     virtual ~CANFunctionSet(){};
 
+    virtual bool is_responding_function();
+    virtual bool is_automatic_function();
+
 protected:
     // if _before_external_handler() returns CAN_RES_NEXT_OK then external handler will be called
     virtual CAN_function_result_t _before_external_handler(CANFrame *can_frame = nullptr) override;
@@ -307,6 +313,9 @@ public:
                            CANFunctionBase *next_err_function = nullptr);
 
     virtual ~CANFunctionSendRawBase(){};
+
+    virtual bool is_responding_function();
+    virtual bool is_automatic_function();
 
 protected:
     // validates states of all companion functions
