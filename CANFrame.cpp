@@ -276,8 +276,8 @@ void CANFrame::_frame_func_to_string(char *dest_string)
         strcpy(dest_string, "CAN_FUNC_TIMER_NORMAL");
         break;
 
-    case CAN_FUNC_TIMER_ATTENTION:
-        strcpy(dest_string, "CAN_FUNC_TIMER_ATTENTION");
+    case CAN_FUNC_TIMER_WARNING:
+        strcpy(dest_string, "CAN_FUNC_TIMER_WARNING");
         break;
 
     case CAN_FUNC_TIMER_CRITICAL:

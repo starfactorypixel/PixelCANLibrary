@@ -14,15 +14,23 @@ const char *DataField::_state_data_field_ok = "ok";
 const char *DataField::_state_data_field_alarm = "alarm";
 const char *DataField::_state_data_field_error = "error";
 
+// the data field attention state name for logging
+const char *DataField::_attention_state_none = "none";
+const char *DataField::_attention_state_normal = "normal";
+const char *DataField::_attention_state_warning = "warning";
+const char *DataField::_attention_state_critical = "critical";
+
 DataField::DataField(void *data, uint32_t array_item_count)
 {
     delete_data_source();
+    delete_attention_checkers();
     set_data_source(data, array_item_count);
 }
 
 DataField::~DataField()
 {
     delete_data_source();
+    delete_attention_checkers();
 }
 
 bool DataField::operator==(const DataField &other)
@@ -51,6 +59,7 @@ void DataField::delete_data_source()
     _array_item_size = 0;
 
     set_state(DFS_ERROR);
+    set_attention_state(DF_ATTENTION_STATE_NONE);
 }
 
 bool DataField::set_data_source(void *data, uint32_t array_item_count)
@@ -171,6 +180,17 @@ data_field_state_t DataField::update_state()
         set_state(DFS_ERROR);
     }
 
+    data_field_attention_state_t attention_check_cumulative_result = DF_ATTENTION_STATE_NORMAL;
+    for (DataFieldAttentionCheckerBase *checker : _attention_checkers_list)
+    {
+        data_field_attention_state_t attention_check_result = checker->attention_check(_get_src_pointer(), get_data_byte_array_length());
+        if (attention_check_result > attention_check_cumulative_result)
+        {
+            attention_check_cumulative_result = attention_check_result;
+        };
+    }
+    set_attention_state(attention_check_cumulative_result);
+
     return get_state();
 }
 
@@ -194,12 +214,83 @@ const char *DataField::get_state_name()
     }
 }
 
+data_field_attention_state_t DataField::get_attention_state()
+{
+    return _attention_state;
+}
+
+const char *DataField::get_attention_state_name()
+{
+    switch (get_attention_state())
+    {
+    case DF_ATTENTION_STATE_NONE:
+        return _attention_state_none;
+
+    case DF_ATTENTION_STATE_NORMAL:
+        return _attention_state_normal;
+
+    case DF_ATTENTION_STATE_WARNING:
+        return _attention_state_warning;
+
+    case DF_ATTENTION_STATE_CRITICAL:
+        return _attention_state_critical;
+
+    default:
+        return _value_unknown;
+    }
+}
+
+void DataField::set_attention_state(data_field_attention_state_t attention_state)
+{
+    _attention_state = attention_state;
+}
+
+DataFieldAttentionCheckerBase *DataField::add_attention_checker(DataFieldAttentionCheckerBase *checker)
+{
+    if (checker == nullptr)
+        return checker;
+
+    _attention_checkers_list.push_back(checker);
+
+    return checker;
+}
+
+uint8_t DataField::get_attention_checkers_count()
+{
+    return _attention_checkers_list.size();
+}
+
+bool DataField::has_attention_checkers()
+{
+    return !_attention_checkers_list.empty();
+}
+
+void DataField::delete_attention_checkers()
+{
+    for (DataFieldAttentionCheckerBase *i : _attention_checkers_list)
+    {
+        if (i != nullptr)
+            delete i;
+    }
+    _attention_checkers_list.clear();
+}
+
 void DataField::print(const char *prefix)
 {
-    LOG("%sDataField: state = %s, item size = %d (%s), item count = %d", prefix, get_state_name(),
-        get_item_size(), get_source_type_name(), get_item_count());
+    LOG("%sDataField: state = %s, attention = %s, item size = %d (%s), item count = %d", prefix, get_state_name(),
+        get_attention_state_name(), get_item_size(), get_source_type_name(), get_item_count());
 
-    this->_print_handler(prefix);
+    char str_buff[70] = {0};
+    sprintf(str_buff, "%s    ", prefix);
+    this->_print_handler(str_buff);
+
+    uint8_t count = 0;
+    LOG("%s    Attention checkers: %s", prefix, _attention_checkers_list.empty() ? "no checkers" : "");
+    for (DataFieldAttentionCheckerBase *checker : _attention_checkers_list)
+    {
+        sprintf(str_buff, "%s        #%d ", prefix, ++count);
+        checker->print(str_buff);
+    }
 }
 
 /******************************************************************************************************************************
@@ -854,7 +945,7 @@ void DataFieldRawData::cancel_all()
     {
         get_external_handler_abort()();
     }
-    
+
     _current_total_data_size = 0;
     _file_code = 0;
     _current_chunk_index = 0;

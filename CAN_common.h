@@ -3,6 +3,7 @@
 // #pragma once
 
 #include <stdint.h>
+#include <utility>
 #include <queue>
 #include <list>
 #include <typeinfo>
@@ -15,7 +16,6 @@
 using get_ms_tick_function_t = uint32_t (*)();
 
 // Library classes forward declarations
-class DataField;
 class CANObject;
 class CANFrame;
 class CANFunctionBase;
@@ -55,6 +55,14 @@ enum data_field_state_t : uint8_t
 {
     DFS_OK = 0x00,
     DFS_ERROR = 0xFF,
+};
+
+enum data_field_attention_state_t : uint8_t
+{
+    DF_ATTENTION_STATE_NONE = 0x00,
+    DF_ATTENTION_STATE_NORMAL = 0x01,
+    DF_ATTENTION_STATE_WARNING = 0x02,
+    DF_ATTENTION_STATE_CRITICAL = 0x03,
 };
 
 // external handlers for raw data fields
@@ -165,7 +173,7 @@ enum CAN_function_id_t : uint8_t
     CAN_FUNC_SEND_RAW_FINISH_OUT_ERR = 0xF4,
 
     CAN_FUNC_TIMER_NORMAL = 0x61,
-    CAN_FUNC_TIMER_ATTENTION = 0x62,
+    CAN_FUNC_TIMER_WARNING = 0x62,
     CAN_FUNC_TIMER_CRITICAL = 0x63,
 
     CAN_FUNC_SIMPLE_SENDER = 0xC0,

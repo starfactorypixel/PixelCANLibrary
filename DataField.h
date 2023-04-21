@@ -7,6 +7,7 @@
 
 #include "logger.h"
 #include "CAN_common.h"
+#include "DataFieldAttentionChecker.h"
 
 /******************************************************************************************************************************
  *
@@ -16,6 +17,7 @@
 class DataField
 {
 public:
+    DataField() = delete;
     DataField(void *data, uint32_t array_item_count);
     ~DataField();
 
@@ -41,6 +43,15 @@ public:
     bool has_errors();
     const char *get_state_name();
 
+    data_field_attention_state_t get_attention_state();
+    const char *get_attention_state_name();
+    void set_attention_state(data_field_attention_state_t attention_state);
+
+    DataFieldAttentionCheckerBase *add_attention_checker(DataFieldAttentionCheckerBase *checker);
+    uint8_t get_attention_checkers_count();
+    bool has_attention_checkers();
+    void delete_attention_checkers();
+
     virtual void print(const char *prefix);
 
 protected:
@@ -62,15 +73,24 @@ protected:
     static const char *_state_data_field_alarm;
     static const char *_state_data_field_error;
 
+    // the data field attention state name for logging
+    static const char *_attention_state_none;
+    static const char *_attention_state_normal;
+    static const char *_attention_state_warning;
+    static const char *_attention_state_critical;
+
 private:
+    data_field_attention_state_t _attention_state = DF_ATTENTION_STATE_NORMAL;
     data_field_state_t _state; // the state of data field
     data_field_t _source_type = DF_UNKNOWN;
-    uint8_t _array_item_size = 0;   // sizeof one item of array; _type related
+    uint8_t _array_item_size = 0;   // size of one item of array; _type related
     uint32_t _array_item_count = 0; // number of items in the data source array; for single variable it is 1
 
     void *_src_data_pointer = nullptr;
 
     static const char *_source_type_name;
+
+    std::list<DataFieldAttentionCheckerBase *> _attention_checkers_list;
 };
 
 /******************************************************************************************************************************
@@ -81,7 +101,7 @@ private:
 class DataFieldInt8 : public DataField
 {
 public:
-    DataFieldInt8(void *data, uint32_t array_item_count);
+    DataFieldInt8(void *data, uint32_t array_item_count = 1);
     ~DataFieldInt8();
 
     virtual const char *get_source_type_name() override;
@@ -101,7 +121,7 @@ private:
 class DataFieldUint8 : public DataField
 {
 public:
-    DataFieldUint8(void *data, uint32_t array_item_count);
+    DataFieldUint8(void *data, uint32_t array_item_count = 1);
     ~DataFieldUint8();
 
     virtual const char *get_source_type_name() override;
@@ -121,7 +141,7 @@ private:
 class DataFieldInt16 : public DataField
 {
 public:
-    DataFieldInt16(void *data, uint32_t array_item_count);
+    DataFieldInt16(void *data, uint32_t array_item_count = 1);
     ~DataFieldInt16();
 
     virtual const char *get_source_type_name() override;
@@ -141,7 +161,7 @@ private:
 class DataFieldUint16 : public DataField
 {
 public:
-    DataFieldUint16(void *data, uint32_t array_item_count);
+    DataFieldUint16(void *data, uint32_t array_item_count = 1);
     ~DataFieldUint16();
 
     virtual const char *get_source_type_name() override;
@@ -161,7 +181,7 @@ private:
 class DataFieldInt32 : public DataField
 {
 public:
-    DataFieldInt32(void *data, uint32_t array_item_count);
+    DataFieldInt32(void *data, uint32_t array_item_count = 1);
     ~DataFieldInt32();
 
     virtual const char *get_source_type_name() override;
@@ -181,7 +201,7 @@ private:
 class DataFieldUint32 : public DataField
 {
 public:
-    DataFieldUint32(void *data, uint32_t array_item_count);
+    DataFieldUint32(void *data, uint32_t array_item_count = 1);
     ~DataFieldUint32();
 
     virtual const char *get_source_type_name() override;

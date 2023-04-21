@@ -265,9 +265,14 @@ can_object_state_t CANObject::update_state()
 {
     if (has_data_fields())
     {
+        _max_attention_state = DF_ATTENTION_STATE_NORMAL;
         for (DataField *i : _data_fields_list)
         {
             i->update_state();
+            if (i->get_attention_state() > _max_attention_state)
+            {
+                _max_attention_state = i->get_attention_state();
+            }
         }
 
         _set_state(COS_OK);
@@ -338,6 +343,11 @@ DataField *CANObject::get_first_erroneous_data_field()
     }
 
     return nullptr;
+}
+
+data_field_attention_state_t CANObject::get_max_attention_state()
+{
+    return _max_attention_state;
 }
 
 // if function already exists then existing one will be returned
@@ -464,9 +474,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
         cf = new CANFunctionTimerNormal(this, UINT32_MAX);
         break;
 
-    case CAN_FUNC_TIMER_ATTENTION:
+    case CAN_FUNC_TIMER_WARNING:
+        cf = new CANFunctionTimerWarning(this, UINT32_MAX);
+        break;
+
     case CAN_FUNC_TIMER_CRITICAL:
-#warning 'Attention' and 'Critical' timers are not implemented because there is no difference with 'Normal' timer. Need more info.
+        cf = new CANFunctionTimerCritical(this, UINT32_MAX);
         break;
 
     case CAN_FUNC_EVENT_ERROR:

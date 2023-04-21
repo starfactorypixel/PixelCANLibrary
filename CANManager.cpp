@@ -68,7 +68,7 @@ void CANManager::print(const char *prefix)
 {
     char str[100];
     uint16_t item_counter = 0;
-    LOG("%s***********************************************", prefix);
+    LOG("%s-----------------------------------------------", prefix);
     LOG("%sCAN Manager data", prefix);
 
     // print CANObject data
@@ -110,7 +110,7 @@ void CANManager::print(const char *prefix)
         LOG("%s    TX queue is empty.", prefix);
     }
 
-    LOG("%s***********************************************", prefix);
+    LOG("%s-----------------------------------------------", prefix);
 }
 
 bool CANManager::take_new_rx_frame(CANFrame &can_frame)

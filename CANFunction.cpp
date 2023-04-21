@@ -308,9 +308,52 @@ bool CANFunctionTimerBase::is_automatic_function()
     return true;
 }
 
+// enables or suspend all timers of the object depending of the object's attention state
+void CANFunctionTimerBase::_timers_family_validator()
+{
+    CANFunctionBase *timer = nullptr;
+    CANObject &can_object = *get_parent();
+
+    switch (can_object.get_max_attention_state())
+    {
+    case DF_ATTENTION_STATE_NORMAL:
+        timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
+        if (timer != nullptr) timer->enable();
+        timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
+        if (timer != nullptr) timer->suspend();
+        timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
+        if (timer != nullptr) timer->suspend();
+        break;
+    
+    case DF_ATTENTION_STATE_WARNING:
+        timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
+        if (timer != nullptr) timer->suspend();
+        timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
+        if (timer != nullptr) timer->enable();
+        timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
+        if (timer != nullptr) timer->suspend();
+        break;
+    
+    case DF_ATTENTION_STATE_CRITICAL:
+        timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
+        if (timer != nullptr) timer->suspend();
+        timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
+        if (timer != nullptr) timer->suspend();
+        timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
+        if (timer != nullptr) timer->enable();
+        break;
+    
+    case DF_ATTENTION_STATE_NONE:
+    default:
+        break;
+    }
+}
+
 CAN_function_result_t CANFunctionTimerBase::_default_handler(CANFrame *can_frame)
 {
-    if (get_parent()->get_tick() - _last_action_tick >= get_period())
+    _timers_family_validator();
+
+    if (!this->is_suspended() && get_parent()->get_tick() - _last_action_tick >= get_period())
     {
         _last_action_tick = get_parent()->get_tick();
         return _timer_handler();
@@ -321,7 +364,9 @@ CAN_function_result_t CANFunctionTimerBase::_default_handler(CANFrame *can_frame
 
 CAN_function_result_t CANFunctionTimerBase::_before_external_handler(CANFrame *can_frame)
 {
-    if (get_parent()->get_tick() - _last_action_tick >= get_period())
+    _timers_family_validator();
+
+    if (!this->is_suspended() && get_parent()->get_tick() - _last_action_tick >= get_period())
     {
         _last_action_tick = get_parent()->get_tick();
         return CAN_RES_NEXT_OK;
@@ -350,6 +395,60 @@ CAN_function_result_t CANFunctionTimerNormal::_timer_handler()
     can_object.fill_can_frame_with_data(can_frame, get_id());
 
     can_frame.print("CANFunctionTimerNormal: ");
+
+    CANManager &can_manager = *can_object.get_parent();
+    can_manager.add_tx_queue_item(can_frame);
+
+    return CAN_RES_FINAL;
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionTimerWarning: class for the warning timed messages
+ *
+ ******************************************************************************************************************************/
+CANFunctionTimerWarning::CANFunctionTimerWarning(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler,
+                                               CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionTimerBase(CAN_FUNC_TIMER_WARNING, parent, period_ms, external_handler, next_ok_function, next_err_function)
+{
+    set_name("CANFunctionTimerWarning");
+    enable();
+}
+
+CAN_function_result_t CANFunctionTimerWarning::_timer_handler()
+{
+    CANFrame can_frame;
+    CANObject &can_object = *get_parent();
+    can_object.fill_can_frame_with_data(can_frame, get_id());
+
+    can_frame.print("CANFunctionTimerWarning: ");
+
+    CANManager &can_manager = *can_object.get_parent();
+    can_manager.add_tx_queue_item(can_frame);
+
+    return CAN_RES_FINAL;
+}
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionTimerCritical: class for the critical timed messages
+ *
+ ******************************************************************************************************************************/
+CANFunctionTimerCritical::CANFunctionTimerCritical(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler,
+                                               CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+    : CANFunctionTimerBase(CAN_FUNC_TIMER_CRITICAL, parent, period_ms, external_handler, next_ok_function, next_err_function)
+{
+    set_name("CANFunctionTimerCritical");
+    enable();
+}
+
+CAN_function_result_t CANFunctionTimerCritical::_timer_handler()
+{
+    CANFrame can_frame;
+    CANObject &can_object = *get_parent();
+    can_object.fill_can_frame_with_data(can_frame, get_id());
+
+    can_frame.print("CANFunctionTimerCritical: ");
 
     CANManager &can_manager = *can_object.get_parent();
     can_manager.add_tx_queue_item(can_frame);

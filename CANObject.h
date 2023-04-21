@@ -51,6 +51,8 @@ public:
     bool is_state_ok();
     DataField *get_first_erroneous_data_field();
 
+    data_field_attention_state_t get_max_attention_state();
+
     // if function already exists then existing one will be returned
     // for automatic and indirect functions there are no such limitations
     CANFunctionBase *add_function(CAN_function_id_t func_id);
@@ -86,6 +88,7 @@ private:
     can_id_t _id = 0;
     CANManager *_parent = nullptr;
     can_object_state_t _state = COS_UNKNOWN_ERROR;
+    data_field_attention_state_t _max_attention_state = DF_ATTENTION_STATE_NONE;
 
     std::list<DataField *> _data_fields_list;
     std::list<CANFunctionBase *> _functions_list;

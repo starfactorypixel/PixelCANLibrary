@@ -163,6 +163,9 @@ protected:
     // may be complement by derived class
     virtual bool _equals(CANFunctionBase const &other) const;
 
+    // enables or suspend all timers of the object depending of the object's attention state
+    void _timers_family_validator();
+
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
 
     // virtual function for correct and systematic comparison of derived classes
@@ -179,7 +182,7 @@ private:
 
 /******************************************************************************************************************************
  *
- * CANFunctionTimerNormal: class for normal timed messages
+ * CANFunctionTimerNormal: class for the normal timed messages
  *
  ******************************************************************************************************************************/
 class CANFunctionTimerNormal : public CANFunctionTimerBase
@@ -189,6 +192,40 @@ public:
                            CANFunctionBase *next_ok_function = nullptr, CANFunctionBase *next_err_function = nullptr);
 
     virtual ~CANFunctionTimerNormal(){};
+
+protected:
+    virtual CAN_function_result_t _timer_handler() override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionTimerWarning: class for the warning timed messages
+ *
+ ******************************************************************************************************************************/
+class CANFunctionTimerWarning : public CANFunctionTimerBase
+{
+public:
+    CANFunctionTimerWarning(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler = nullptr,
+                            CANFunctionBase *next_ok_function = nullptr, CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionTimerWarning(){};
+
+protected:
+    virtual CAN_function_result_t _timer_handler() override;
+};
+
+/******************************************************************************************************************************
+ *
+ * CANFunctionTimerCritical: class for the critical timed messages
+ *
+ ******************************************************************************************************************************/
+class CANFunctionTimerCritical : public CANFunctionTimerBase
+{
+public:
+    CANFunctionTimerCritical(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler = nullptr,
+                             CANFunctionBase *next_ok_function = nullptr, CANFunctionBase *next_err_function = nullptr);
+
+    virtual ~CANFunctionTimerCritical(){};
 
 protected:
     virtual CAN_function_result_t _timer_handler() override;
