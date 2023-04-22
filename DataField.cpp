@@ -961,7 +961,7 @@ void DataFieldRawData::_print_handler(const char *prefix)
 {
     LOG("%sDataFieldRawData:", prefix);
 
-    LOG("%s    file = %d, write delay = %d ms, total data size = %d bytes, chunk = %d of %d (%d bytes), frame = %d of %d, max frame data length = %d", prefix,
+    LOG("%s    file = %d, write delay = %d ms, total data size = %ld bytes, chunk = %d of %d (%d bytes), frame = %d of %d, max frame data length = %d", prefix,
         get_file_code(), get_writing_delay(), get_expected_total_size(),
         get_current_chunk_index(), get_chunks_count(), get_current_chunk_size(),
         _expected_frame_index, get_frames_count(), _frame_max_data_length);
