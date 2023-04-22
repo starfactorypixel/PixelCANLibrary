@@ -5,6 +5,7 @@
 #include "CANLibrary.h"
 
 class CANManager;
+class CANObject;
 
 #ifdef __cplusplus
 extern "C"
