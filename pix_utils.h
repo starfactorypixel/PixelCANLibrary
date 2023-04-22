@@ -38,6 +38,7 @@ inline void swap_endian(int32_t &val)
  * Reverse array with temp variable. XOR-method is about 2 times slower.
  *
 \*******************************************************************************************/
+/*
 void reverse_array(uint8_t *array, uint8_t array_size)
 {
     uint8_t temp = 0;
@@ -60,5 +61,6 @@ void reverse_array(uint8_t *array, uint8_t array_size)
         j--;
     }
 }
+*/
 
 #endif // PIX_UTILS_H
