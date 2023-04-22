@@ -79,3 +79,15 @@ bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_erro
     
     return true;
 }
+
+// Add normal, warning and critical timers with the same period to the CANObject
+bool add_three_timers(CANObject &co, uint32_t period_ms)
+{
+    CANFunctionTimerBase *func_timer = nullptr;
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_NORMAL);
+    func_timer->set_period(period_ms);
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_WARNING);
+    func_timer->set_period(period_ms);
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_CRITICAL);
+    func_timer->set_period(period_ms);
+}
