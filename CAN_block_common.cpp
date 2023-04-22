@@ -1,5 +1,17 @@
 #include "CAN_block_common.h"
 
+// Add normal, warning and critical timers with the same period to the CANObject
+bool add_three_timers(CANObject &co, uint32_t period_ms)
+{
+    CANFunctionTimerBase *func_timer = nullptr;
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_NORMAL);
+    func_timer->set_period(period_ms);
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_WARNING);
+    func_timer->set_period(period_ms);
+    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_CRITICAL);
+    func_timer->set_period(period_ms);
+}
+
 bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, uint32_t timer_period)
 {
     // *******************************************************************
@@ -10,15 +22,13 @@ bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, 
     // *******************************************************************
 
     CANObject *co = nullptr;
-    CANFunctionTimerNormal *func_timer_norm = nullptr;
 
     co = cm.add_can_object(can_id, "BlockInfo");
     co->add_data_field(DF_UINT8, &block_info.board_data_byte);
     co->add_data_field(DF_UINT8, &block_info.software_data_byte);
     co->add_function(CAN_FUNC_REQUEST_IN);
-    func_timer_norm = (CANFunctionTimerNormal *)co->add_function(CAN_FUNC_TIMER_NORMAL);
-    func_timer_norm->set_period(timer_period);
-    
+    add_three_timers(*co, timer_period);
+
     return true;
 }
 
@@ -58,7 +68,7 @@ bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
 
     co = cm.add_can_object(can_id, "BlockCfg");
     co->add_function(CAN_FUNC_REQUEST_IN);
-    
+
     return true;
 }
 
@@ -76,18 +86,6 @@ bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_erro
     co = cm.add_can_object(can_id, "BlockError");
     co->add_data_field(DF_UINT8, &block_error.code);
     co->add_function(CAN_FUNC_REQUEST_IN);
-    
-    return true;
-}
 
-// Add normal, warning and critical timers with the same period to the CANObject
-bool add_three_timers(CANObject &co, uint32_t period_ms)
-{
-    CANFunctionTimerBase *func_timer = nullptr;
-    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_NORMAL);
-    func_timer->set_period(period_ms);
-    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_WARNING);
-    func_timer->set_period(period_ms);
-    func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_CRITICAL);
-    func_timer->set_period(period_ms);
+    return true;
 }

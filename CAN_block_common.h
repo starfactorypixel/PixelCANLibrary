@@ -135,14 +135,14 @@ struct __attribute__ ((__packed__)) block_error_t
 };
 
 // **********************************************************************************************************
+// Add normal, warning and critical timers with the same period to the CANObject
+bool add_three_timers(CANObject &co, uint32_t period_ms);
+
 // Universal block functions
 bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, uint32_t timer_period = 15000);
 bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_health, uint32_t event_period = 3000);
 bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg);
 bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error);
-
-// Add normal, warning and critical timers with the same period to the CANObject
-bool add_three_timers(CANObject &co, uint32_t period_ms);
 
 #ifdef __cplusplus
 }
