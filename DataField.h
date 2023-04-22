@@ -19,7 +19,7 @@ class DataField
 public:
     DataField() = delete;
     DataField(void *data, uint32_t array_item_count);
-    ~DataField();
+    virtual ~DataField();
 
     bool operator==(const DataField &other);
     bool operator!=(const DataField &other);
@@ -102,7 +102,7 @@ class DataFieldInt8 : public DataField
 {
 public:
     DataFieldInt8(void *data, uint32_t array_item_count = 1);
-    ~DataFieldInt8();
+    virtual ~DataFieldInt8();
 
     virtual const char *get_source_type_name() override;
 
@@ -122,7 +122,7 @@ class DataFieldUint8 : public DataField
 {
 public:
     DataFieldUint8(void *data, uint32_t array_item_count = 1);
-    ~DataFieldUint8();
+    virtual ~DataFieldUint8();
 
     virtual const char *get_source_type_name() override;
 
@@ -142,7 +142,7 @@ class DataFieldInt16 : public DataField
 {
 public:
     DataFieldInt16(void *data, uint32_t array_item_count = 1);
-    ~DataFieldInt16();
+    virtual ~DataFieldInt16();
 
     virtual const char *get_source_type_name() override;
 
@@ -162,7 +162,7 @@ class DataFieldUint16 : public DataField
 {
 public:
     DataFieldUint16(void *data, uint32_t array_item_count = 1);
-    ~DataFieldUint16();
+    virtual ~DataFieldUint16();
 
     virtual const char *get_source_type_name() override;
 
@@ -182,7 +182,7 @@ class DataFieldInt32 : public DataField
 {
 public:
     DataFieldInt32(void *data, uint32_t array_item_count = 1);
-    ~DataFieldInt32();
+    virtual ~DataFieldInt32();
 
     virtual const char *get_source_type_name() override;
 
@@ -202,7 +202,7 @@ class DataFieldUint32 : public DataField
 {
 public:
     DataFieldUint32(void *data, uint32_t array_item_count = 1);
-    ~DataFieldUint32();
+    virtual ~DataFieldUint32();
 
     virtual const char *get_source_type_name() override;
 
@@ -227,7 +227,7 @@ public:
                      raw_data_write_chunk_handler_t external_handler_write_chunk = nullptr,
                      raw_data_close_and_rename_file_handler_t external_handler_close_file = nullptr,
                      raw_data_abort_operations_handler_t external_handler_abort = nullptr);
-    ~DataFieldRawData();
+    virtual ~DataFieldRawData();
 
     virtual const char *get_source_type_name() override;
 

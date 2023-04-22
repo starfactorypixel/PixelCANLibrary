@@ -10,14 +10,12 @@ bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, 
     // *******************************************************************
 
     CANObject *co = nullptr;
-    DataField *df = nullptr;
     CANFunctionTimerNormal *func_timer_norm = nullptr;
-    CANFunctionRequest *func_request = nullptr;
 
     co = cm.add_can_object(can_id, "BlockInfo");
-    df = co->add_data_field(DF_UINT8, &block_info.board_data_byte);
-    df = co->add_data_field(DF_UINT8, &block_info.software_data_byte);
-    func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
+    co->add_data_field(DF_UINT8, &block_info.board_data_byte);
+    co->add_data_field(DF_UINT8, &block_info.software_data_byte);
+    co->add_function(CAN_FUNC_REQUEST_IN);
     func_timer_norm = (CANFunctionTimerNormal *)co->add_function(CAN_FUNC_TIMER_NORMAL);
     func_timer_norm->set_period(timer_period);
     
@@ -34,15 +32,13 @@ bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_he
     // *******************************************************************
 
     CANObject *co = nullptr;
-    DataField *df = nullptr;
-    CANFunctionRequest *func_request = nullptr;
     CANFunctionSimpleEvent *func_event = nullptr;
 
     co = cm.add_can_object(can_id, "BlockHealth");
-    df = co->add_data_field(DF_UINT16, &block_health.voltage);
-    df = co->add_data_field(DF_INT16, &block_health.current);
-    df = co->add_data_field(DF_INT8, &block_health.temperature);
-    func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
+    co->add_data_field(DF_UINT16, &block_health.voltage);
+    co->add_data_field(DF_INT16, &block_health.current);
+    co->add_data_field(DF_INT8, &block_health.temperature);
+    co->add_function(CAN_FUNC_REQUEST_IN);
     func_event = (CANFunctionSimpleEvent *)co->add_function(CAN_FUNC_EVENT_ERROR);
     func_event->set_period(event_period);
 
@@ -59,10 +55,9 @@ bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
     // *******************************************************************
 
     CANObject *co = nullptr;
-    CANFunctionRequest *func_request = nullptr;
 
     co = cm.add_can_object(can_id, "BlockCfg");
-    func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
+    co->add_function(CAN_FUNC_REQUEST_IN);
     
     return true;
 }
@@ -77,12 +72,10 @@ bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_erro
     // *******************************************************************
 
     CANObject *co = nullptr;
-    DataField *df = nullptr;
-    CANFunctionRequest *func_request = nullptr;
 
     co = cm.add_can_object(can_id, "BlockError");
-    df = co->add_data_field(DF_UINT8, &block_error.code);
-    func_request = (CANFunctionRequest *)co->add_function(CAN_FUNC_REQUEST_IN);
+    co->add_data_field(DF_UINT8, &block_error.code);
+    co->add_function(CAN_FUNC_REQUEST_IN);
     
     return true;
 }

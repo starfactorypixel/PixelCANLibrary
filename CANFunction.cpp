@@ -1177,7 +1177,6 @@ void CANFunctionChunkData::_set_functions_family_states(CAN_function_result_t se
 {
     CANFunctionBase *can_func = nullptr;
     CANObject &co = *this->get_parent();
-    DataFieldRawData *raw_data_field = (DataFieldRawData *)co.get_data_field(0);
 
     // all functions exist, so we don't need to check if can_func == null
 
@@ -1394,11 +1393,8 @@ CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_han
 
 bool CANFunctionSendFinish::_functions_family_state_validator()
 {
-    CANObject &co = *this->get_parent();
-
     // CAN_FUNC_SEND_RAW_FINISH_IN should work always
     this->enable();
-
     // state of other functions doesn't affect anithing
 
     return true;
@@ -1465,7 +1461,6 @@ CAN_function_result_t CANFunctionSendFinish::_send_raw_handler(CANFrame *can_fra
 
 void CANFunctionSendFinish::_set_functions_family_states(CAN_function_result_t send_raw_handler_result)
 {
-    CANFunctionBase *can_func = nullptr;
     CANObject &co = *this->get_parent();
 
     // all functions exist, so we don't need to check if can_func == null
