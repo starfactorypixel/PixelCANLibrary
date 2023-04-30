@@ -10,6 +10,8 @@ bool add_three_timers(CANObject &co, uint32_t period_ms)
     func_timer->set_period(period_ms);
     func_timer = (CANFunctionTimerBase *)co.add_function(CAN_FUNC_TIMER_CRITICAL);
     func_timer->set_period(period_ms);
+
+    return true;
 }
 
 bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, uint32_t timer_period)
