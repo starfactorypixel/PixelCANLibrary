@@ -1,6 +1,6 @@
 #include "CAN_block_common.h"
 
-// Add normal, warning and critical timers with the same period to the CANObject
+// Adds normal, warning and critical timers with the same period to the CANObject
 bool add_three_timers(CANObject &co, uint32_t period_ms)
 {
     CANFunctionTimerBase *func_timer = nullptr;
@@ -14,6 +14,31 @@ bool add_three_timers(CANObject &co, uint32_t period_ms)
     return true;
 }
 
+// initializes universal light CANObject with:
+//    - set function (external handler expected),
+//    - request function
+//    - event function (default event period is 3000 ms, it can be changed)
+//    - single uint8_t data field
+// Returns a pointer to the created CANObject
+CANObject *init_common_light_can_object(CANManager &cm, can_id_t can_object_id, const char *object_name, uint8_t &data_variable,
+                                        CAN_function_handler_t set_external_handler, uint32_t event_period)
+{
+    CANObject *co = cm.add_can_object(can_object_id, object_name);
+    
+    co->add_data_field(DF_UINT8, &data_variable);
+    
+    co->add_function(CAN_FUNC_REQUEST_IN);
+    
+    CANFunctionSet *func_set = (CANFunctionSet *)co->add_function(CAN_FUNC_SET_IN);
+    func_set->set_external_handler(set_external_handler);
+    
+    CANFunctionSimpleEvent *func_event = (CANFunctionSimpleEvent *)co->add_function(CAN_FUNC_EVENT_ERROR);
+    func_event->set_period(event_period);
+
+    return co;
+}
+
+// initializes BlockInfo common CANObject
 bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, uint32_t timer_period)
 {
     // *******************************************************************
@@ -34,6 +59,7 @@ bool init_block_info(CANManager &cm, uint16_t can_id, block_info_t &block_info, 
     return true;
 }
 
+// initializes BlockHealth common CANObject
 bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_health, uint32_t event_period)
 {
     // *******************************************************************
@@ -57,6 +83,7 @@ bool init_block_health(CANManager &cm, uint16_t can_id, block_health_t &block_he
     return true;
 }
 
+// initializes BlockCfg common CANObject
 bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
 {
     // *******************************************************************
@@ -74,6 +101,7 @@ bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
     return true;
 }
 
+// initializes BlockError common CANObject
 bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error)
 {
     // *******************************************************************
