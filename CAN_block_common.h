@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "CANLibrary.h"
+#include "CAN_common.h"
 
 class CANManager;
 class CANObject;
