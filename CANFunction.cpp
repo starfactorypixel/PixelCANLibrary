@@ -582,6 +582,7 @@ CAN_function_result_t CANFunctionSimpleEvent::_default_handler(CANFrame *can_fra
     if (!can_object.has_data_fields_alarm())
         return CAN_RES_FINAL;
     */
+    return CAN_RES_FINAL; // TODO: temporary disable events, event will not spam with messages
 
     return CANFunctionTimerBase::_default_handler(can_frame);
 }
