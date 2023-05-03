@@ -102,7 +102,7 @@ bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg)
 }
 
 // initializes BlockError common CANObject
-bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error)
+bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error, uint32_t event_period)
 {
     // *******************************************************************
     // BlockError
@@ -112,10 +112,13 @@ bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_erro
     // *******************************************************************
 
     CANObject *co = nullptr;
+    CANFunctionSimpleEvent *func_event = nullptr;
 
     co = cm.add_can_object(can_id, "BlockError");
     co->add_data_field(DF_UINT8, &block_error.code);
     co->add_function(CAN_FUNC_REQUEST_IN);
+    func_event = (CANFunctionSimpleEvent *)co->add_function(CAN_FUNC_EVENT_ERROR);
+    func_event->set_period(event_period);
 
     return true;
 }

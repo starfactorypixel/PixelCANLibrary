@@ -156,7 +156,7 @@ extern "C"
     // initializes BlockCfg common CANObject
     bool init_block_cfg(CANManager &cm, uint16_t can_id, block_cfg_t &block_cfg);
     // initializes BlockError common CANObject
-    bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error);
+    bool init_block_error(CANManager &cm, uint16_t can_id, block_error_t &block_error, uint32_t event_period = 3000);
 
 #ifdef __cplusplus
 }
