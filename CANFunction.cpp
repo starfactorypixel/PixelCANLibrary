@@ -27,7 +27,6 @@ CANFunctionBase::CANFunctionBase(CAN_function_id_t id,
 
 CANFunctionBase::~CANFunctionBase()
 {
-    delete_name();
 }
 
 bool CANFunctionBase::operator==(const CANFunctionBase &other)
@@ -48,10 +47,9 @@ bool CANFunctionBase::_equals(CANFunctionBase const &other) const
     return (this->_id == other._id);
 }
 
-void CANFunctionBase::set_id(CAN_function_id_t id, const char *name)
+void CANFunctionBase::set_id(CAN_function_id_t id /*, const char *name*/)
 {
     _id = id;
-    set_name(name);
 }
 
 CAN_function_id_t CANFunctionBase::get_id()
@@ -162,31 +160,6 @@ const char *CANFunctionBase::get_state_name()
     }
 }
 
-const char *CANFunctionBase::get_name()
-{
-    return _name;
-}
-
-void CANFunctionBase::set_name(const char *name)
-{
-    if (name == nullptr)
-        return;
-
-    _name = new char[strlen(name) + 1];
-    strcpy(_name, name);
-}
-
-bool CANFunctionBase::has_name()
-{
-    return get_name() != nullptr;
-}
-
-void CANFunctionBase::delete_name()
-{
-    if (has_name())
-        delete[] _name;
-}
-
 void CANFunctionBase::_set_state(CAN_function_state_t state)
 {
     _state = state;
@@ -233,8 +206,8 @@ bool CANFunctionBase::is_indirect_function()
 
 void CANFunctionBase::print(const char *prefix)
 {
-    LOG("%sFunction: id = 0x%02X (%s), state = %s, responding = %s, automatic = %s, indirect = %s", prefix, get_id(),
-        has_name() ? get_name() : "noname", get_state_name(),
+    LOG("%sFunction: id = 0x%02X (%s), state = %s, responding = %s, automatic = %s, indirect = %s",
+        prefix, get_id(), get_name(), get_state_name(),
         is_responding_function() ? "yes" : "no",
         is_automatic_function() ? "yes" : "no",
         is_indirect_function() ? "yes" : "no");
@@ -282,8 +255,8 @@ bool CANFunctionTimerBase::_equals(CANFunctionBase const &other) const
     if (typeid(*this) != typeid(other))
         return false;
 
-    auto that = static_cast<CANFunctionTimerBase const &>(other);
-    if (this->_period_ms != that._period_ms)
+    CANFunctionTimerBase const *that = static_cast<CANFunctionTimerBase const *>(&other);
+    if (this->_period_ms != that->_period_ms)
         return false;
     return CANFunctionBase::_equals(other);
 }
@@ -318,31 +291,40 @@ void CANFunctionTimerBase::_timers_family_validator()
     {
     case DF_ATTENTION_STATE_NORMAL:
         timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
-        if (timer != nullptr) timer->enable();
+        if (timer != nullptr)
+            timer->enable();
         timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         break;
-    
+
     case DF_ATTENTION_STATE_WARNING:
         timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
-        if (timer != nullptr) timer->enable();
+        if (timer != nullptr)
+            timer->enable();
         timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         break;
-    
+
     case DF_ATTENTION_STATE_CRITICAL:
         timer = can_object.get_function(CAN_FUNC_TIMER_NORMAL);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         timer = can_object.get_function(CAN_FUNC_TIMER_WARNING);
-        if (timer != nullptr) timer->suspend();
+        if (timer != nullptr)
+            timer->suspend();
         timer = can_object.get_function(CAN_FUNC_TIMER_CRITICAL);
-        if (timer != nullptr) timer->enable();
+        if (timer != nullptr)
+            timer->enable();
         break;
-    
+
     case DF_ATTENTION_STATE_NONE:
     default:
         break;
@@ -380,12 +362,18 @@ CAN_function_result_t CANFunctionTimerBase::_before_external_handler(CANFrame *c
  * CANFunctionTimerNormal: class for normal timed messages
  *
  ******************************************************************************************************************************/
+const char *CANFunctionTimerNormal::_name = "CANFunctionTimerNormal";
+
 CANFunctionTimerNormal::CANFunctionTimerNormal(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler,
                                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionTimerBase(CAN_FUNC_TIMER_NORMAL, parent, period_ms, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionTimerNormal");
     enable();
+}
+
+const char *CANFunctionTimerNormal::get_name()
+{
+    return this->_name;
 }
 
 CAN_function_result_t CANFunctionTimerNormal::_timer_handler()
@@ -407,12 +395,18 @@ CAN_function_result_t CANFunctionTimerNormal::_timer_handler()
  * CANFunctionTimerWarning: class for the warning timed messages
  *
  ******************************************************************************************************************************/
+const char *CANFunctionTimerWarning::_name = "CANFunctionTimerWarning";
+
 CANFunctionTimerWarning::CANFunctionTimerWarning(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler,
-                                               CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+                                                 CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionTimerBase(CAN_FUNC_TIMER_WARNING, parent, period_ms, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionTimerWarning");
     enable();
+}
+
+const char *CANFunctionTimerWarning::get_name()
+{
+    return this->_name;
 }
 
 CAN_function_result_t CANFunctionTimerWarning::_timer_handler()
@@ -434,12 +428,18 @@ CAN_function_result_t CANFunctionTimerWarning::_timer_handler()
  * CANFunctionTimerCritical: class for the critical timed messages
  *
  ******************************************************************************************************************************/
+const char *CANFunctionTimerCritical::_name = "CANFunctionTimerCritical";
+
 CANFunctionTimerCritical::CANFunctionTimerCritical(CANObject *parent, uint32_t period_ms, CAN_function_handler_t external_handler,
-                                               CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
+                                                   CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionTimerBase(CAN_FUNC_TIMER_CRITICAL, parent, period_ms, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionTimerCritical");
     enable();
+}
+
+const char *CANFunctionTimerCritical::get_name()
+{
+    return this->_name;
 }
 
 CAN_function_result_t CANFunctionTimerCritical::_timer_handler()
@@ -461,11 +461,12 @@ CAN_function_result_t CANFunctionTimerCritical::_timer_handler()
  * CANFunctionRequest: class for incoming request
  *
  ******************************************************************************************************************************/
+const char *CANFunctionRequest::_name = "CANFunctionRequest";
+
 CANFunctionRequest::CANFunctionRequest(CANObject *parent, CAN_function_handler_t external_handler,
                                        CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_REQUEST_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionRequest");
     enable();
 }
 
@@ -477,6 +478,11 @@ bool CANFunctionRequest::is_responding_function()
 bool CANFunctionRequest::is_automatic_function()
 {
     return false;
+}
+
+const char *CANFunctionRequest::get_name()
+{
+    return this->_name;
 }
 
 CAN_function_result_t CANFunctionRequest::_default_handler(CANFrame *can_frame)
@@ -512,11 +518,12 @@ CAN_function_result_t CANFunctionRequest::_default_handler(CANFrame *can_frame)
  * May be useful as the base class for all functions with outcoming messages. But it is very useful itself.
  *
  ******************************************************************************************************************************/
+const char *CANFunctionSimpleSender::_name = "CANFunctionSimpleSender";
+
 CANFunctionSimpleSender::CANFunctionSimpleSender(CANObject *parent, CAN_function_handler_t external_handler,
                                                  CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_SIMPLE_SENDER, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionSimpleSender");
     enable();
 }
 
@@ -528,6 +535,11 @@ bool CANFunctionSimpleSender::is_responding_function()
 bool CANFunctionSimpleSender::is_automatic_function()
 {
     return false;
+}
+
+const char *CANFunctionSimpleSender::get_name()
+{
+    return this->_name;
 }
 
 CAN_function_result_t CANFunctionSimpleSender::_default_handler(CANFrame *can_frame)
@@ -563,13 +575,19 @@ CAN_function_result_t CANFunctionSimpleSender::_default_handler(CANFrame *can_fr
  * CANFunctionSimpleEvent: class for events
  *
  ******************************************************************************************************************************/
+const char *CANFunctionSimpleEvent::_name = "CANFunctionSimpleEvent";
+
 CANFunctionSimpleEvent::CANFunctionSimpleEvent(CANObject *parent, uint32_t period_ms,
                                                CAN_function_handler_t external_handler,
                                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionTimerBase(CAN_FUNC_EVENT_ERROR, parent, period_ms, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionSimpleEvent");
     enable();
+}
+
+const char *CANFunctionSimpleEvent::get_name()
+{
+    return this->_name;
 }
 
 // decorator for CANFunctionTimerBase::_default_handler
@@ -608,11 +626,12 @@ CAN_function_result_t CANFunctionSimpleEvent::_timer_handler()
  * CANFunctionSet: class for setter
  *
  ******************************************************************************************************************************/
+const char *CANFunctionSet::_name = "CANFunctionSet";
+
 CANFunctionSet::CANFunctionSet(CANObject *parent, CAN_function_handler_t external_handler,
                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(CAN_FUNC_SET_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionSet");
     enable();
 }
 
@@ -624,6 +643,11 @@ bool CANFunctionSet::is_responding_function()
 bool CANFunctionSet::is_automatic_function()
 {
     return false;
+}
+
+const char *CANFunctionSet::get_name()
+{
+    return this->_name;
 }
 
 // should return CAN_RES_NEXT_OK for external handler call performing
@@ -832,11 +856,12 @@ CAN_function_result_t CANFunctionSendRawBase::_default_handler(CANFrame *can_fra
  * CANFunctionSendInit: function which starts send raw data sequence
  *
  ******************************************************************************************************************************/
+const char *CANFunctionSendInit::_name = "CANFunctionSendInit";
+
 CANFunctionSendInit::CANFunctionSendInit(CANObject *parent, CAN_function_handler_t external_handler,
                                          CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_INIT_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionSendInit");
     enable();
 
     if (parent == nullptr)
@@ -857,6 +882,11 @@ CANFunctionSendInit::CANFunctionSendInit(CANObject *parent, CAN_function_handler
         cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
     }
     set_next_err_function(cfunc);
+}
+
+const char *CANFunctionSendInit::get_name()
+{
+    return this->_name;
 }
 
 bool CANFunctionSendInit::_functions_family_state_validator()
@@ -959,11 +989,12 @@ void CANFunctionSendInit::_set_functions_family_states(CAN_function_result_t sen
  * CANFunctionChunkStart: it initiates the process of chunk receiving
  *
  ******************************************************************************************************************************/
+const char *CANFunctionChunkStart::_name = "CANFunctionChunkStart";
+
 CANFunctionChunkStart::CANFunctionChunkStart(CANObject *parent, CAN_function_handler_t external_handler,
                                              CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_START_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionChunkStart");
     suspend(); // initially suspended, should be enabled by other functions
 
     if (parent == nullptr)
@@ -984,6 +1015,11 @@ CANFunctionChunkStart::CANFunctionChunkStart(CANObject *parent, CAN_function_han
         cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
     }
     set_next_err_function(cfunc);
+}
+
+const char *CANFunctionChunkStart::get_name()
+{
+    return this->_name;
 }
 
 bool CANFunctionChunkStart::_functions_family_state_validator()
@@ -1087,11 +1123,12 @@ void CANFunctionChunkStart::_set_functions_family_states(CAN_function_result_t s
  * CANFunctionChunkData: it receives small portion of chunk data (can frame with data)
  *
  ******************************************************************************************************************************/
+const char *CANFunctionChunkData::_name = "CANFunctionChunkData";
+
 CANFunctionChunkData::CANFunctionChunkData(CANObject *parent, CAN_function_handler_t external_handler,
                                            CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_DATA_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionChunkData");
     suspend(); // initially suspended, should be enabled by other functions
 
     if (parent == nullptr)
@@ -1106,6 +1143,11 @@ CANFunctionChunkData::CANFunctionChunkData(CANObject *parent, CAN_function_handl
     }
     set_next_err_function(cfunc);
     set_next_ok_function(nullptr);
+}
+
+const char *CANFunctionChunkData::get_name()
+{
+    return this->_name;
 }
 
 bool CANFunctionChunkData::_functions_family_state_validator()
@@ -1200,11 +1242,12 @@ void CANFunctionChunkData::_set_functions_family_states(CAN_function_result_t se
  * CANFunctionChunkEnd: it finalizes the process of chunk receiving
  *
  ******************************************************************************************************************************/
+const char *CANFunctionChunkEnd::_name = "CANFunctionChunkEnd";
+
 CANFunctionChunkEnd::CANFunctionChunkEnd(CANObject *parent, CAN_function_handler_t external_handler,
                                          CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_CHUNK_END_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionChunkEnd");
     suspend(); // initially suspended, should be enabled by other functions
 
     if (parent == nullptr)
@@ -1225,6 +1268,11 @@ CANFunctionChunkEnd::CANFunctionChunkEnd(CANObject *parent, CAN_function_handler
         cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
     }
     set_next_err_function(cfunc);
+}
+
+const char *CANFunctionChunkEnd::get_name()
+{
+    return this->_name;
 }
 
 bool CANFunctionChunkEnd::_functions_family_state_validator()
@@ -1365,11 +1413,12 @@ void CANFunctionChunkEnd::_set_functions_family_states(CAN_function_result_t sen
  * CANFunctionSendFinish: finalizes send raw data sequence
  *
  ******************************************************************************************************************************/
+const char *CANFunctionSendFinish::_name = "CANFunctionSendFinish";
+
 CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_handler_t external_handler,
                                              CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionSendRawBase(CAN_FUNC_SEND_RAW_FINISH_IN, parent, external_handler, next_ok_function, next_err_function)
 {
-    set_name("CANFunctionSendFinish");
     enable(); // should be enabled always
 
     if (parent == nullptr)
@@ -1390,6 +1439,11 @@ CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_han
         cfunc = can_object.add_function(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
     }
     set_next_err_function(cfunc);
+}
+
+const char *CANFunctionSendFinish::get_name()
+{
+    return this->_name;
 }
 
 bool CANFunctionSendFinish::_functions_family_state_validator()

@@ -28,7 +28,7 @@ public:
     bool operator==(const CANFunctionBase &other);
     bool operator!=(const CANFunctionBase &other);
 
-    void set_id(CAN_function_id_t id, const char *name = nullptr);
+    void set_id(CAN_function_id_t id);
     CAN_function_id_t get_id();
 
     void set_parent(CANObject *parent);
@@ -65,10 +65,7 @@ public:
     CAN_function_state_t get_state();
     const char *get_state_name();
 
-    const char *get_name();
-    void set_name(const char *name);
-    bool has_name();
-    void delete_name();
+    virtual const char *get_name() = 0;
 
     // function main handler
     bool process(CANFrame *can_frame = nullptr);
@@ -193,8 +190,13 @@ public:
 
     virtual ~CANFunctionTimerNormal(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual CAN_function_result_t _timer_handler() override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -210,8 +212,13 @@ public:
 
     virtual ~CANFunctionTimerWarning(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual CAN_function_result_t _timer_handler() override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -227,8 +234,13 @@ public:
 
     virtual ~CANFunctionTimerCritical(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual CAN_function_result_t _timer_handler() override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -249,8 +261,13 @@ public:
     virtual bool is_responding_function();
     virtual bool is_automatic_function();
 
+    virtual const char *get_name() override;
+
 protected:
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -273,10 +290,13 @@ public:
     virtual bool is_responding_function();
     virtual bool is_automatic_function();
 
+    virtual const char *get_name() override;
+
 protected:
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
 
 private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -294,6 +314,8 @@ public:
 
     virtual ~CANFunctionSimpleEvent(){};
 
+    virtual const char *get_name() override;
+
 protected:
     // decorator for CANFunctionTimerBase::_default_handler
     // before timeout _last_action_tick update we should check if there any alarm
@@ -302,6 +324,9 @@ protected:
     // virtual function for correct and systematic comparison of derived classes
     // should be complement by derived class
     virtual CAN_function_result_t _timer_handler() override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -325,6 +350,8 @@ public:
     virtual bool is_responding_function();
     virtual bool is_automatic_function();
 
+    virtual const char *get_name() override;
+
 protected:
     // if _before_external_handler() returns CAN_RES_NEXT_OK then external handler will be called
     virtual CAN_function_result_t _before_external_handler(CANFrame *can_frame = nullptr) override;
@@ -334,6 +361,9 @@ protected:
 
     // should override it with error value returned
     virtual CAN_function_result_t _default_handler(CANFrame *can_frame = nullptr) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -384,10 +414,15 @@ public:
 
     virtual ~CANFunctionSendInit(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual bool _functions_family_state_validator() override;
     virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -405,10 +440,15 @@ public:
 
     virtual ~CANFunctionChunkStart(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual bool _functions_family_state_validator() override;
     virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -426,10 +466,15 @@ public:
 
     virtual ~CANFunctionChunkData(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual bool _functions_family_state_validator() override;
     virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -447,10 +492,15 @@ public:
 
     virtual ~CANFunctionChunkEnd(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual bool _functions_family_state_validator() override;
     virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+
+private:
+    static const char *_name;
 };
 
 /******************************************************************************************************************************
@@ -468,10 +518,15 @@ public:
 
     virtual ~CANFunctionSendFinish(){};
 
+    virtual const char *get_name() override;
+
 protected:
     virtual bool _functions_family_state_validator() override;
     virtual CAN_function_result_t _send_raw_handler(CANFrame *can_frame = nullptr) override;
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) override;
+
+private:
+    static const char *_name;
 };
 
 #endif // CANFUNCTION_H

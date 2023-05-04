@@ -373,12 +373,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SET_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SET_OUT_OK, "CANFunctionSimpleSender|set-ok");
+        cf->set_id(CAN_FUNC_SET_OUT_OK);
         break;
 
     case CAN_FUNC_SET_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SET_OUT_ERR, "CANFunctionSimpleSender|set-error");
+        cf->set_id(CAN_FUNC_SET_OUT_ERR);
         break;
 
     case CAN_FUNC_REQUEST_IN:
@@ -391,12 +391,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_REQUEST_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_REQUEST_OUT_OK, "CANFunctionSimpleSender|request-ok");
+        cf->set_id(CAN_FUNC_REQUEST_OUT_OK);
         break;
 
     case CAN_FUNC_REQUEST_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_REQUEST_OUT_ERR, "CANFunctionSimpleSender|request-error");
+        cf->set_id(CAN_FUNC_REQUEST_OUT_ERR);
         break;
 
     case CAN_FUNC_SEND_RAW_INIT_IN:
@@ -406,12 +406,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_OK, "CANFunctionSimpleSender|send raw init-ok");
+        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
         break;
 
     case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_ERR, "CANFunctionSimpleSender|send raw init-error");
+        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
         break;
 
     case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
@@ -421,12 +421,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK, "CANFunctionSimpleSender|chunk start-ok");
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
         break;
 
     case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR, "CANFunctionSimpleSender|chunk start-error");
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
         break;
 
     case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
@@ -437,7 +437,7 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR, "CANFunctionSimpleSender|chunk data-error");
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
         break;
 
     case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
@@ -447,12 +447,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK, "CANFunctionSimpleSender|chunk end-ok");
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
         break;
 
     case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR, "CANFunctionSimpleSender|chunk end-error");
+        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
         break;
 
     case CAN_FUNC_SEND_RAW_FINISH_IN:
@@ -462,12 +462,12 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
 
     case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK, "CANFunctionSimpleSender|send raw finish-ok");
+        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
         break;
 
     case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
         cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR, "CANFunctionSimpleSender|send raw finish-error");
+        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
         break;
 
     case CAN_FUNC_TIMER_NORMAL:
