@@ -41,20 +41,8 @@ extern "C"
             uint8_t software_data_byte;
         };
 
-        // byte 3
-        // uint8_t unused1;
-
-        // byte 4
-        // uint8_t unused2;
-
-        // byte 5
-        // uint8_t unused3;
-
-        // byte 6
-        // uint8_t unused4;
-
-        // byte 7
-        // uint8_t unused5;
+        // byte 3..7
+        uint8_t unused[5];
     };
 
     // BlockHealth
@@ -63,20 +51,10 @@ extern "C"
     // Информация о здоровье блока. См. "Системные параметры".
     struct __attribute__((__packed__)) block_health_t
     {
-        // byte 1 & 2
         uint16_t voltage;
-
-        // byte 3 & 4
         int16_t current;
-
-        // byte 5
         int8_t temperature;
-
-        // byte 6
-        // uint8_t unused1;
-
-        // byte 7
-        // uint8_t unused2;
+        uint8_t unused[2];
     };
 
     // BlockCfg
@@ -85,26 +63,7 @@ extern "C"
     // Чтение и запись настроек блока. См. "Системные параметры".
     struct __attribute__((__packed__)) block_cfg_t
     {
-        // byte 1
-        uint8_t unused1;
-
-        // byte 2
-        uint8_t unused2;
-
-        // byte 3
-        uint8_t unused3;
-
-        // byte 4
-        uint8_t unused4;
-
-        // byte 5
-        uint8_t unused5;
-
-        // byte 6
-        uint8_t unused6;
-
-        // byte 7
-        uint8_t unused7;
+        uint8_t unused[7];
     };
 
     // BlockError
@@ -113,26 +72,8 @@ extern "C"
     // Ошибки блока. См. "Системные параметры".
     struct __attribute__((__packed__)) block_error_t
     {
-        // byte 1
         uint8_t code;
-
-        // byte 2
-        // uint8_t unused1;
-
-        // byte 3
-        // uint8_t unused2;
-
-        // byte 4
-        // uint8_t unused3;
-
-        // byte 5
-        // uint8_t unused4;
-
-        // byte 6
-        // uint8_t unused5;
-
-        // byte 7
-        // uint8_t unused6;
+        uint8_t unused[6];
     };
 
     // **********************************************************************************************************
