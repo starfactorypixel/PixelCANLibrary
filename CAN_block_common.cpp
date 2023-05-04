@@ -1,4 +1,7 @@
 #include "CAN_block_common.h"
+#include "CANFunction.h"
+#include "CANObject.h"
+#include "CANManager.h"
 
 // Adds normal, warning and critical timers with the same period to the CANObject
 bool add_three_timers(CANObject &co, uint32_t period_ms)
@@ -24,14 +27,14 @@ CANObject *init_common_light_can_object(CANManager &cm, can_id_t can_object_id, 
                                         CAN_function_handler_t set_external_handler, uint32_t event_period)
 {
     CANObject *co = cm.add_can_object(can_object_id, object_name);
-    
+
     co->add_data_field(DF_UINT8, &data_variable);
-    
+
     co->add_function(CAN_FUNC_REQUEST_IN);
-    
+
     CANFunctionSet *func_set = (CANFunctionSet *)co->add_function(CAN_FUNC_SET_IN);
     func_set->set_external_handler(set_external_handler);
-    
+
     CANFunctionSimpleEvent *func_event = (CANFunctionSimpleEvent *)co->add_function(CAN_FUNC_EVENT_ERROR);
     func_event->set_period(event_period);
 

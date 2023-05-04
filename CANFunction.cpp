@@ -1,4 +1,9 @@
 #include "CANFunction.h"
+#include "logger.h"
+#include "CANFrame.h"
+#include "CANObject.h"
+#include "CANManager.h"
+#include <typeinfo>
 
 /******************************************************************************************************************************
  *

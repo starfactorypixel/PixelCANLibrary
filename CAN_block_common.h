@@ -2,7 +2,6 @@
 #define CAN_BLOCK_COMMON_H
 
 #include <stdint.h>
-#include "CANLibrary.h"
 #include "CAN_common.h"
 
 class CANManager;

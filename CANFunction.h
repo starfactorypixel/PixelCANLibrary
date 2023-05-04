@@ -1,14 +1,12 @@
 #ifndef CANFUNCTION_H
 #define CANFUNCTION_H
-// #pragma once
 
 #include <stdint.h>
 
-#include "logger.h"
 #include "CAN_common.h"
-#include "CANObject.h"
 
 class CANObject;
+class CANFrame;
 
 /******************************************************************************************************************************
  *

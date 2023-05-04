@@ -7,23 +7,11 @@
  ******************************************************************************************************************************/
 CANManager::CANManager(get_ms_tick_function_t tick_func)
 {
-    _can_objects_list.clear();
-
     set_tick_func(tick_func);
 }
 
 CANManager::~CANManager()
 {
-    _can_objects_list.clear();
-
-    while (!_rx_frame_queue.empty())
-    {
-        _rx_frame_queue.pop();
-    }
-    while (!_tx_frame_queue.empty())
-    {
-        _tx_frame_queue.pop();
-    }
 }
 
 void CANManager::set_tick_func(get_ms_tick_function_t tick_func)
@@ -46,19 +34,25 @@ bool CANManager::process()
     bool co_update_result = true;
     for (CANObject &i : _can_objects_list)
     {
-        co_update_result = i.update();
-        result = result && co_update_result;
+        if (i.is_initialized())
+        {
+            co_update_result = i.update();
+            result = result && co_update_result;
+        }
     }
 
-    CANFrame cf;
     CANObject *co = nullptr;
-    while (has_rx_frames_in_queue())
+    for (CANFrame &i : _rx_frame_queue)
     {
-        pop_rx_frame_from_queue(cf);
-        co = get_can_object_by_can_id(cf.get_id());
-        if (co == nullptr)
-            return false;
-        co->process_incoming_frame(cf);
+        if (i.is_initialized())
+        {
+            co = get_can_object_by_can_id(i.get_id());
+            if (co != nullptr)
+            {
+                co->process_incoming_frame(i);
+            }
+            i.clear_frame();
+        }
     }
 
     return result;
@@ -74,21 +68,31 @@ void CANManager::print(const char *prefix)
     // print CANObject data
     LOG("%s  CAN Objects:", prefix);
     item_counter = 0;
+    // item_counter overflow check
+    static_assert(CAN_MANAGER_MAX_CAN_OBJECTS <= UINT16_MAX);
+
     for (CANObject &i : _can_objects_list)
     {
-        sprintf(str, "%s    #%d: ", prefix, ++item_counter);
-        i.print(str);
+        if (i.is_initialized())
+        {
+            sprintf(str, "%s    #%d: ", prefix, ++item_counter);
+            i.print(str);
+        }
     }
+
+    // item_counter overflow check for RX and TX queues
+    static_assert(CAN_MANAGER_RX_TX_QUEUE_SIZE <= UINT16_MAX);
 
     // print RX queue items
     LOG("%s  RX queue:", prefix);
     item_counter = 0;
-    std::queue<CANFrame> temp = _rx_frame_queue;
-    while (!temp.empty())
+    for (CANFrame &i : _rx_frame_queue)
     {
-        sprintf(str, "%s    #%d: ", prefix, ++item_counter);
-        temp.front().print(str);
-        temp.pop();
+        if (i.is_initialized())
+        {
+            sprintf(str, "%s    #%d: ", prefix, ++item_counter);
+            i.print(str);
+        }
     }
     if (item_counter == 0)
     {
@@ -98,12 +102,13 @@ void CANManager::print(const char *prefix)
     // print TX queue items
     LOG("%s  TX queue:", prefix);
     item_counter = 0;
-    temp = _tx_frame_queue;
-    while (!temp.empty())
+    for (CANFrame &i : _tx_frame_queue)
     {
-        sprintf(str, "%s    #%d: ", prefix, ++item_counter);
-        temp.front().print(str);
-        temp.pop();
+        if (i.is_initialized())
+        {
+            sprintf(str, "%s    #%d: ", prefix, ++item_counter);
+            i.print(str);
+        }
     }
     if (item_counter == 0)
     {
@@ -118,9 +123,18 @@ bool CANManager::take_new_rx_frame(CANFrame &can_frame)
     if (!has_can_object(can_frame.get_id()))
         return false;
 
-    _rx_frame_queue.push(can_frame);
+    for (CANFrame &i : _rx_frame_queue)
+    {
+        if (!i.is_initialized())
+        {
+            i.set_frame(can_frame);
+            return true;
+        }
+    }
+    LOG("WARNING: no free space in RX CAN frame queue (%d max)", CAN_MANAGER_RX_TX_QUEUE_SIZE);
+    can_frame.print("Ignored ");
 
-    return true;
+    return false;
 }
 
 bool CANManager::take_new_rx_frame(can_id_t id, uint8_t *data, uint8_t data_length)
@@ -129,25 +143,38 @@ bool CANManager::take_new_rx_frame(can_id_t id, uint8_t *data, uint8_t data_leng
     return take_new_rx_frame(new_frame);
 }
 
-bool CANManager::pop_rx_frame_from_queue(CANFrame &can_frame)
-{
-    if (!has_rx_frames_in_queue())
-        return false;
-
-    can_frame.set_frame(_rx_frame_queue.front());
-    _rx_frame_queue.pop();
-
-    return true;
-}
-
 uint8_t CANManager::get_rx_queue_size()
 {
-    return _rx_frame_queue.size();
+    // TODO: we can implement free_space_counter for RX and TX queues and avoid for loops
+    uint8_t queue_size = 0;
+    // queue_size overflow check
+    static_assert(CAN_MANAGER_RX_TX_QUEUE_SIZE <= UINT8_MAX);
+
+    for (CANFrame &i : _rx_frame_queue)
+    {
+        if (i.is_initialized())
+        {
+            ++queue_size;
+        }
+    }
+    return queue_size;
 }
 
 uint8_t CANManager::get_tx_queue_size()
 {
-    return _tx_frame_queue.size();
+    // TODO: we can implement free_space_counter for RX and TX queues and avoid for loops
+    uint8_t queue_size = 0;
+    // queue_size overflow check
+    static_assert(CAN_MANAGER_RX_TX_QUEUE_SIZE <= UINT8_MAX);
+
+    for (CANFrame &i : _tx_frame_queue)
+    {
+        if (i.is_initialized())
+        {
+            ++queue_size;
+        }
+    }
+    return queue_size;
 }
 
 bool CANManager::has_rx_frames_in_queue()
@@ -157,8 +184,19 @@ bool CANManager::has_rx_frames_in_queue()
 
 bool CANManager::add_tx_queue_item(CANFrame &can_frame)
 {
-    _tx_frame_queue.push(can_frame);
-    return true;
+    for (CANFrame &i : _tx_frame_queue)
+    {
+        if (!i.is_initialized())
+        {
+            i.set_frame(can_frame);
+            return true;
+        }
+    }
+
+    LOG("WARNING: no free space in TX CAN frame queue (%d max)", CAN_MANAGER_RX_TX_QUEUE_SIZE);
+    can_frame.print("Ignored ");
+
+    return false;
 }
 
 bool CANManager::has_tx_frames_for_transmission()
@@ -171,10 +209,16 @@ bool CANManager::give_tx_frame(CANFrame &can_frame)
     if (!has_tx_frames_for_transmission())
         return false;
 
-    can_frame.set_frame(_tx_frame_queue.front());
-    _tx_frame_queue.pop();
-
-    return true;
+    for (CANFrame &i : _tx_frame_queue)
+    {
+        if (i.is_initialized())
+        {
+            can_frame.set_frame(i);
+            i.clear_frame();
+            return true;
+        }
+    }
+    return false;
 }
 
 bool CANManager::give_tx_frame(can_id_t &id, uint8_t *data, uint8_t &data_length)
@@ -194,7 +238,19 @@ bool CANManager::give_tx_frame(can_id_t &id, uint8_t *data, uint8_t &data_length
 
 uint8_t CANManager::get_can_objects_count()
 {
-    return _can_objects_list.size();
+    // TODO: we can implement object_counter and avoid for loops
+    uint8_t can_objects_count = 0;
+    // can_objects_count overflow check
+    static_assert(CAN_MANAGER_MAX_CAN_OBJECTS <= UINT8_MAX);
+
+    for (CANObject &i : _can_objects_list)
+    {
+        if (i.is_initialized())
+        {
+            ++can_objects_count;
+        }
+    }
+    return can_objects_count;
 }
 
 CANObject *CANManager::add_can_object(can_id_t id, const char *name)
@@ -204,31 +260,31 @@ CANObject *CANManager::add_can_object(can_id_t id, const char *name)
     if (new_can_object != nullptr)
         return new_can_object;
 
-    CANObject co;
-    _can_objects_list.push_back(co);
+    for (CANObject &i : _can_objects_list)
+    {
+        if (!i.is_initialized())
+        {
+            i.set_id(id);
+            i.set_parent(*this);
+            i.set_name(name);
+            i.update_state();
+            return &i;
+        }
+    }
 
-    CANObject *pco = &_can_objects_list.back();
-    pco->set_id(id);
-    pco->set_parent(*this);
-    pco->update_state();
-    // TODO: we are setting name here because in CANObject name is dynamic char array and it will not be copied due the insertion into the list.
-    // The other one member with the same problem is CANObject::_functions_list because it stores pointers.
-    // It can be fixed by implementation of a copy constructor and operator= (assignment). It may be done later if we will need it.
-    // Other class members are correctly copied by default stuff
-    pco->set_name(name);
-
-    return pco;
+    LOG("WARNING: not enough space. No more than %d CANObjects are allowed.", CAN_MANAGER_MAX_CAN_OBJECTS);
+    return nullptr;
 }
 
 CANObject *CANManager::get_can_object_by_index(uint8_t index)
 {
-    if (index >= get_can_objects_count())
+    // index consistency check
+    static_assert(CAN_MANAGER_MAX_CAN_OBJECTS <= UINT8_MAX);
+
+    if (index >= CAN_MANAGER_MAX_CAN_OBJECTS || !_can_objects_list[index].is_initialized())
         return nullptr;
 
-    std::list<CANObject>::iterator it = _can_objects_list.begin();
-    std::advance(it, index);
-
-    return &(*it);
+    return &_can_objects_list[index];
 }
 
 CANObject *CANManager::get_can_object_by_can_id(can_id_t id)
@@ -254,7 +310,7 @@ bool CANManager::delete_can_object(can_id_t id)
     {
         if (id == i.get_id())
         {
-            _can_objects_list.remove(i);
+            i.delete_object();
             return true;
         }
     }

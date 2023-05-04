@@ -1,12 +1,7 @@
 #ifndef CAN_COMMON_H
 #define CAN_COMMON_H
-// #pragma once
 
 #include <stdint.h>
-#include <utility>
-#include <queue>
-#include <list>
-#include <typeinfo>
 
 /******************************************************************************************************************************
  *
@@ -104,9 +99,10 @@ enum can_frame_error_codes_t : uint8_t
  ******************************************************************************************************************************/
 enum can_object_state_t : uint8_t
 {
-    COS_OK = 0x00,
-    COS_DATA_FIELD_ERROR = 0x01,
-    COS_DATA_BUFFER_SIZE_ERROR = 0x02,
+    COS_NOT_INITIALIZED = 0x00,
+    COS_OK = 0x01,
+    COS_DATA_FIELD_ERROR = 0x02,
+    COS_DATA_BUFFER_SIZE_ERROR = 0x03,
     COS_UNKNOWN_ERROR = 0xFF,
 };
 
@@ -115,6 +111,12 @@ enum can_object_state_t : uint8_t
  * CANManager related types
  *
  ******************************************************************************************************************************/
+// The maximum number of CANFrames in CAN_RX/CAN_TX frame buffer
+#define CAN_MANAGER_RX_TX_QUEUE_SIZE 16
+
+// The maximum number of CAN objects, that CANManager can manage
+// Equals to double block size (2*16)
+#define CAN_MANAGER_MAX_CAN_OBJECTS 32
 
 /******************************************************************************************************************************
  *

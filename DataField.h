@@ -1,11 +1,9 @@
 #ifndef DATAFIELD_H
 #define DATAFIELD_H
-// #pragma once
 
 #include <stdint.h>
-#include <string.h>
+#include <list>
 
-#include "logger.h"
 #include "CAN_common.h"
 #include "DataFieldAttentionChecker.h"
 

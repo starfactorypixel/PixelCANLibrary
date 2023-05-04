@@ -1,4 +1,5 @@
 #include "CANObject.h"
+#include "CANManager.h"
 
 /******************************************************************************************************************************
  *
@@ -6,13 +7,14 @@
  *
  ******************************************************************************************************************************/
 const char *CANObject::_value_unknown = "unknown";
+const char *CANObject::_state_not_initialized = "not initialized";
 const char *CANObject::_state_object_ok = "ok";
 const char *CANObject::_state_data_field_error = "data field error";
 const char *CANObject::_state_data_buffer_size_error = "data buffer size error";
 const char *CANObject::_state_unknown_error = "unknown error";
 
 CANObject::CANObject()
-    : _id(0), _parent(nullptr), _state(COS_UNKNOWN_ERROR), _name(nullptr)
+    : _id(0), _parent(nullptr), _state(COS_NOT_INITIALIZED), _name(nullptr)
 {
     _data_fields_list.clear();
     _functions_list.clear();
@@ -26,6 +28,11 @@ CANObject::CANObject(uint16_t id, CANManager &parent, const char *name) : CANObj
 }
 
 CANObject::~CANObject()
+{
+    delete_object();
+}
+
+void CANObject::delete_object()
 {
     for (DataField *i : _data_fields_list)
     {
@@ -42,6 +49,9 @@ CANObject::~CANObject()
     _functions_list.clear();
 
     delete_name();
+    _id = 0x00;
+    _parent = nullptr;
+    _set_state(COS_NOT_INITIALIZED);
 }
 
 bool CANObject::operator==(const CANObject &can_object)
@@ -208,6 +218,9 @@ const char *CANObject::get_state_name()
 {
     switch (get_state())
     {
+    case COS_NOT_INITIALIZED:
+        return _state_not_initialized;
+
     case COS_OK:
         return _state_object_ok;
 
@@ -228,6 +241,11 @@ const char *CANObject::get_state_name()
 bool CANObject::is_state_ok()
 {
     return get_state() == COS_OK;
+}
+
+bool CANObject::is_initialized()
+{
+    return get_state() != COS_NOT_INITIALIZED;
 }
 
 void CANObject::_set_state(can_object_state_t state)

@@ -1,11 +1,7 @@
 #ifndef CANFRAME_H
 #define CANFRAME_H
-// #pragma once
 
 #include <stdint.h>
-#include <string.h>
-
-#include "logger.h"
 #include "CAN_common.h"
 
 /******************************************************************************************************************************

@@ -1,19 +1,15 @@
 #ifndef CANOBJECT_H
 #define CANOBJECT_H
-// #pragma once
 
 #include <stdint.h>
 #include <list>
 
 #include "CAN_common.h"
+#include "CANFrame.h"
 #include "DataField.h"
 #include "CANFunction.h"
-#include "CANFrame.h"
-#include "CANManager.h"
 
 class CANManager;
-class CANFunctionInterface;
-class CANFunctionBase;
 
 /******************************************************************************************************************************
  *
@@ -26,6 +22,8 @@ public:
     CANObject();
     CANObject(uint16_t id, CANManager &parent, const char *name = nullptr);
     ~CANObject();
+
+    void delete_object();
 
     bool operator==(const CANObject &frame);
 
@@ -49,6 +47,7 @@ public:
     can_object_state_t get_state();
     const char *get_state_name();
     bool is_state_ok();
+    bool is_initialized();
     DataField *get_first_erroneous_data_field();
 
     data_field_attention_state_t get_max_attention_state();
@@ -99,6 +98,7 @@ private:
     // 'unknown' for logging
     static const char *_value_unknown;
     // the object state names for logging
+    static const char *_state_not_initialized;
     static const char *_state_object_ok;
     static const char *_state_data_field_error;
     static const char *_state_data_buffer_size_error;
