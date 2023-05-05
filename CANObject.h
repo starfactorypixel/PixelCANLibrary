@@ -1,7 +1,55 @@
 #pragma once
 
 #include <stdint.h>
+#include "CANDataField.h"
+#include "CANFunction.h"
 
+/******************************************************************************************
+ *
+ ******************************************************************************************/
+class CANObjectInterfaceMock
+{
+public:
+    virtual ~CANObjectInterfaceMock() = default;
+
+    /// @brief Registers CANObject's data field 
+    /// @param data_field CANDataField for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) = 0;
+
+    /// @brief Registers CANObject's CANFunction 
+    /// @param data_field CANFunction for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) = 0;
+
+    /// @brief Performs CANObjects processing
+    /// @param time Current time
+    virtual void Process(uint32_t time) = 0;
+};
+
+template <uint8_t _max_data_fields = 7, uint8_t _max_functions = 16>
+class CANObjectMock : CANObjectInterfaceMock
+{
+public:
+    virtual ~CANObjectMock() = default;
+
+    virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) override { return false; };
+    virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) override { return false; };
+    virtual void Process(uint32_t time) override {};
+
+private:
+    CANDataFieldInterface *_data_fields[_max_data_fields];
+    uint8_t _data_fields_idx = 0;
+    static_assert(_max_data_fields <= UINT8_MAX); // static _data_fields_idx overflow check
+
+    CANFunctionInterface *_can_functions[_max_functions];
+    uint8_t _can_functions_idx = 0;
+    static_assert(_max_functions <= UINT8_MAX); // static _can_functions_idx overflow check
+};
+
+/******************************************************************************************
+ *
+ ******************************************************************************************/
 class CANObjectInterface
 {
 public:
@@ -49,6 +97,9 @@ public:
     // virtual void SetBytes(uint8_t *bytes, uint8_t length) = 0;
 };
 
+/******************************************************************************************
+ *
+ ******************************************************************************************/
 template <typename T>
 class CANObject : public CANObjectInterface
 {

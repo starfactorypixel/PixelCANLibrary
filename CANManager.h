@@ -5,20 +5,55 @@
 #include "CAN_common.h"
 #include "CANObject.h"
 
-template <uint8_t _max_param = 16>
+
+/******************************************************************************************
+ * 
+ ******************************************************************************************/
+class CANManagerInterface
+{
+    using send_function_t = void (*)(can_id_t id, uint8_t *data, uint8_t length);
+public:
+    virtual ~CANManagerInterface() = default;
+
+    /// @brief Registers specified CANObject
+    /// @param can_object CANObject for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
+    
+    /// @brief Registers low level function, that sends data via CAN bus
+    /// @param can_send_func Pointer to the function
+    virtual void RegisterSendFunction(send_function_t can_send_func) = 0;
+    
+    /// @brief Performs CANObjects processing
+    /// @param time Current time
+    virtual void Process(uint32_t time) = 0;
+
+    /// @brief Processes incoming CAN frame (without any queues?)
+    /// @param id CANObject ID from the CAN frame
+    /// @param data Pointer to the data array
+    /// @param length Data length
+    /// @return true if CANObject with ID is registered, false if not
+    virtual bool IncomingCANFrame(can_id_t id, uint8_t *data, uint8_t length) = 0;
+};
+
+/******************************************************************************************
+ * 
+ ******************************************************************************************/
+template <uint8_t _max_objects = 16>
 class CANManager
 {
+    // don't perform data processing often
+    // _tick_time is minimal delay in ms between the data processing
     static const uint8_t _tick_time = 5;
-
     using send_function_t = void (*)(can_id_t id, uint8_t *data, uint8_t length);
 
 public:
     /// @brief
     /// @param param CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
-    bool RegParam(CANObjectInterface &param)
+    bool RegisterObject(CANObjectInterface &param)
     {
-        if (_max_param <= _objects_idx)
+        if (_max_objects <= _objects_idx)
             return false;
 
         _objects[_objects_idx++] = &param;
@@ -27,7 +62,7 @@ public:
         return true;
     }
 
-    void RegSendFunc(send_function_t func)
+    void RegisterSendFunction(send_function_t func)
     {
         _send_func = func;
 
@@ -104,9 +139,9 @@ public:
     }
 
 private:
-    CANObjectInterface *_objects[_max_param];
+    CANObjectInterface *_objects[_max_objects];
     uint8_t _objects_idx = 0;
-    static_assert(_max_param <= 255); // static _objects_idx overflow check
+    static_assert(_max_objects <= UINT8_MAX); // static _objects_idx overflow check
 
     send_function_t _send_func;
 
