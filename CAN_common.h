@@ -11,9 +11,9 @@
 using get_ms_tick_function_t = uint32_t (*)();
 
 // Library classes forward declarations
-class CANObject;
-class CANFrame;
-class CANFunctionBase;
+// class CANObject;
+// class CANFrame;
+// class CANFunctionBase;
 
 /******************************************************************************************************************************
  *
@@ -146,7 +146,7 @@ enum CAN_function_result_t : uint8_t
     CAN_RES_FINAL = 0xFF,
 };
 
-using CAN_function_handler_t = CAN_function_result_t (*)(CANObject &parent_object, CANFunctionBase &parent_function, CANFrame *can_frame);
+// using CAN_function_handler_t = CAN_function_result_t (*)(CANObject &parent_object, CANFunctionBase &parent_function, CANFrame *can_frame);
 
 // CAN Function IDs
 enum CAN_function_id_t : uint8_t

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-class ManagerObjInterface
+class CANObjectInterface
 {
 public:
     enum response_t : uint8_t
@@ -38,7 +38,7 @@ public:
     };
 #pragma pack(pop)
 
-    virtual ~ManagerObjInterface() = default;
+    virtual ~CANObjectInterface() = default;
 
     virtual uint8_t Processing(uint32_t time, packet_t &packet) = 0;
 
@@ -52,7 +52,7 @@ public:
 };
 
 template <typename T>
-class ManagerObj : public ManagerObjInterface
+class CANObject : public CANObjectInterface
 {
     using update_t = event_t (*)(T &value, error_t &error);
     using input1_t = response_t (*)(T &value, error_t &error);
@@ -68,7 +68,7 @@ public:
         @param updateFunc Функция запроса обновления значения. В качестве параметра передаётся ссылка на новое значение.
             Если возвращает true, то немедленно отправляет новое значение в CAN, иначе дожидается своего интервала.
     */
-    ManagerObj(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input1_t inputFunc)
+    CANObject(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input1_t inputFunc)
         : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc1(inputFunc), _use_raw(false)
     {
         _force_update = true;
@@ -76,7 +76,7 @@ public:
         return;
     }
 
-    ManagerObj(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input2_t inputFunc)
+    CANObject(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input2_t inputFunc)
         : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc2(inputFunc), _use_raw(true)
     {
         _force_update = true;
@@ -84,7 +84,7 @@ public:
         return;
     }
 
-    ~ManagerObj() = default;
+    ~CANObject() = default;
 
     /*
         Получить текущее значение параметра.

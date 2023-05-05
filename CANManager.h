@@ -1,10 +1,10 @@
 #pragma once
 
 #include <stdint.h>
-#include "ManagerObj.h"
+#include "CANObject.h"
 
 template <uint8_t _max_param = 16>
-class Manager
+class CANManager
 {
     static const uint8_t _tick_time = 5;
 
@@ -14,7 +14,7 @@ public:
     /// @brief
     /// @param param CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
-    bool RegParam(ManagerObjInterface &param)
+    bool RegParam(CANObjectInterface &param)
     {
         if (_max_param <= _objects_idx)
             return false;
@@ -49,7 +49,7 @@ public:
             _last_tick = time;
 
             uint8_t flags;
-            ManagerObjInterface::packet_t packet;
+            CANObjectInterface::packet_t packet;
             for (uint8_t i = 0; i < _objects_idx; ++i)
             {
                 // Передавать time по ссылке и обновлять перед каждым вызовом?
@@ -84,7 +84,7 @@ public:
             if (_objects[i]->GetId() == id)
             {
 
-                ManagerObjInterface::packet_t packet;
+                CANObjectInterface::packet_t packet;
                 packet.length = length - 1;
                 packet.type = data[0];
                 memcpy(&packet.data, &data + 1, length - 1);
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    ManagerObjInterface *_objects[_max_param];
+    CANObjectInterface *_objects[_max_param];
     uint8_t _objects_idx = 0;
 
     send_t _send_func;
