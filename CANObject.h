@@ -29,14 +29,12 @@ public:
         EVENT_ERROR = 0xE6,
     };
 
-#pragma pack(push, 1)
-    struct packet_t
+    struct __attribute__((__packed__)) packet_t
     {
         uint8_t length;
         uint8_t type;
         uint8_t data[7];
     };
-#pragma pack(pop)
 
     virtual ~CANObjectInterface() = default;
 

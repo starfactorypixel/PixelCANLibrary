@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <cassert>
 #include "CANObject.h"
 
 template <uint8_t _max_param = 16>
@@ -8,7 +9,7 @@ class CANManager
 {
     static const uint8_t _tick_time = 5;
 
-    using send_t = void (*)(uint16_t id, uint8_t *data, uint8_t length);
+    using send_function_t = void (*)(uint16_t id, uint8_t *data, uint8_t length);
 
 public:
     /// @brief
@@ -20,19 +21,20 @@ public:
             return false;
 
         _objects[_objects_idx++] = &param;
-        _id_mask |= param.GetId();
+        // _id_mask |= param.GetId();
 
         return true;
     }
 
-    void RegSendFunc(send_t func)
+    void RegSendFunc(send_function_t func)
     {
         _send_func = func;
 
         return;
     }
 
-    bool IsHere(uint16_t id)
+    /*
+    bool HasObject(uint16_t id)
     {
         return ((id & _id_mask) == id);
     }
@@ -41,34 +43,33 @@ public:
     {
         return _id_mask;
     }
+    */
 
     void Processing(uint32_t time)
     {
-        if (time - _last_tick >= _tick_time)
+        if (time - _last_tick < _tick_time)
+            return;
+
+        _last_tick = time;
+
+        uint8_t flags;
+        CANObjectInterface::packet_t packet;
+        for (uint8_t i = 0; i < _objects_idx; ++i)
         {
-            _last_tick = time;
-
-            uint8_t flags;
-            CANObjectInterface::packet_t packet;
-            for (uint8_t i = 0; i < _objects_idx; ++i)
+            // Передавать time по ссылке и обновлять перед каждым вызовом?
+            flags = _objects[i]->Processing(time, packet);
+            if (flags & 0x02)
             {
-                // Передавать time по ссылке и обновлять перед каждым вызовом?
-                flags = _objects[i]->Processing(time, packet);
-                if (flags & 0x02)
-                {
-                    /*
-                    uint8_t *bytes;
-                    uint8_t length;
-                    _objects[i]->GetBytes(bytes, length);       // первый байт не верен
-                    _send_func(_objects[i]->GetId(), bytes, length);
-                    */
+                /*
+                uint8_t *bytes;
+                uint8_t length;
+                _objects[i]->GetBytes(bytes, length);       // первый байт не верен
+                _send_func(_objects[i]->GetId(), bytes, length);
+                */
 
-                    _send_func(_objects[i]->GetId(), &packet.type, packet.length + 1);
-                }
+                _send_func(_objects[i]->GetId(), &packet.type, packet.length + 1);
             }
         }
-
-        return;
     }
 
     /*
@@ -104,10 +105,11 @@ public:
 private:
     CANObjectInterface *_objects[_max_param];
     uint8_t _objects_idx = 0;
+    static_assert(_max_param <= 255); // static _objects_idx overflow check
 
-    send_t _send_func;
+    send_function_t _send_func;
 
-    uint16_t _id_mask = 0b0000000000000000;
+    // uint16_t _id_mask = 0b0000000000000000;
 
     uint32_t _last_tick = 0;
 };

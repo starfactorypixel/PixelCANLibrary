@@ -20,6 +20,7 @@ using get_ms_tick_function_t = uint32_t (*)();
  * DataField related data types
  *
  ******************************************************************************************************************************/
+/*
 union data_mapper_t
 {
     uint8_t u8arr[4];
@@ -75,6 +76,7 @@ using raw_data_write_chunk_handler_t = bool (*)(uint8_t chunk_size, uint8_t *chu
 using raw_data_close_and_rename_file_handler_t = bool (*)(uint8_t file_code);
 // abort all
 using raw_data_abort_operations_handler_t = bool (*)();
+*/
 
 /******************************************************************************************************************************
  *
