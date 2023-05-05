@@ -12,12 +12,12 @@ class CANObjectInterfaceMock
 public:
     virtual ~CANObjectInterfaceMock() = default;
 
-    /// @brief Registers CANObject's data field 
+    /// @brief Registers CANObject's data field
     /// @param data_field CANDataField for registration
     /// @return 'true' if registration was successful, 'false' if not
     virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) = 0;
 
-    /// @brief Registers CANObject's CANFunction 
+    /// @brief Registers CANObject's CANFunction
     /// @param data_field CANFunction for registration
     /// @return 'true' if registration was successful, 'false' if not
     virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) = 0;
@@ -27,6 +27,9 @@ public:
     virtual void Process(uint32_t time) = 0;
 };
 
+/******************************************************************************************
+ *
+ ******************************************************************************************/
 template <uint8_t _max_data_fields = 7, uint8_t _max_functions = 16>
 class CANObjectMock : CANObjectInterfaceMock
 {
@@ -35,7 +38,7 @@ public:
 
     virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) override { return false; };
     virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) override { return false; };
-    virtual void Process(uint32_t time) override {};
+    virtual void Process(uint32_t time) override{};
 
 private:
     CANDataFieldInterface *_data_fields[_max_data_fields];

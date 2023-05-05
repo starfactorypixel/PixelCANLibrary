@@ -8,12 +8,7 @@
  * Common CAN related types
  *
  ******************************************************************************************************************************/
-using get_ms_tick_function_t = uint32_t (*)();
-
-// Library classes forward declarations
-// class CANObject;
-// class CANFrame;
-// class CANFunctionBase;
+// using get_ms_tick_function_t = uint32_t (*)();
 
 /******************************************************************************************************************************
  *
@@ -56,7 +51,7 @@ enum data_field_state_t : uint8_t
     DFS_OK = 0x01,
     DFS_ERROR = 0xFF,
 };
-
+*/
 enum data_field_attention_state_t : uint8_t
 {
     DF_ATTENTION_STATE_NONE = 0x00,
@@ -64,7 +59,7 @@ enum data_field_attention_state_t : uint8_t
     DF_ATTENTION_STATE_WARNING = 0x02,
     DF_ATTENTION_STATE_CRITICAL = 0x03,
 };
-
+/*
 // external handlers for raw data fields
 // free space checker
 using raw_data_free_space_handler_t = bool (*)(uint32_t size_needed);
@@ -83,12 +78,22 @@ using raw_data_abort_operations_handler_t = bool (*)();
  * CANFrame types
  *
  ******************************************************************************************************************************/
-#define CAN_MAX_PAYLOAD 8
+// #define CAN_MAX_PAYLOAD 8
 
 // base CAN frame format uses 11-bit IDs (uint16)
 // extended CAN frame format uses 29-bit IDs (uint32)
 typedef uint16_t can_id_t;
 
+// CANFrame data structure
+// It can be changed to class later (in case we need it)
+struct __attribute__((__packed__)) can_frame_t
+{
+    CAN_function_id_t function_id;
+    uint8_t data[7];
+    uint8_t data_length;
+};
+
+/*
 enum can_frame_error_codes_t : uint8_t
 {
     CAN_FRAME_OK = 0x00,
@@ -97,7 +102,7 @@ enum can_frame_error_codes_t : uint8_t
     CAN_FRAME_NOT_EXPECTED = 0x0E,
     CAN_FRAME_UNKNOWN_ERROR = 0xFF,
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANObject related data types
@@ -120,18 +125,20 @@ enum can_object_state_t : uint8_t
  * CANManager related types
  *
  ******************************************************************************************************************************/
+/*
 // The maximum number of CANFrames in CAN_RX/CAN_TX frame buffer
 #define CAN_MANAGER_RX_TX_QUEUE_SIZE 16
 
 // The maximum number of CAN objects, that CANManager can manage
 // Equals to double block size (2*16)
 #define CAN_MANAGER_MAX_CAN_OBJECTS 32
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunction related types
  *
  ******************************************************************************************************************************/
+/*
 // CAN Function result codes
 enum CAN_function_result_t : uint8_t
 {
@@ -147,7 +154,7 @@ enum CAN_function_result_t : uint8_t
     // function processed all the things but won't to call next handler
     CAN_RES_FINAL = 0xFF,
 };
-
+*/
 // using CAN_function_handler_t = CAN_function_result_t (*)(CANObject &parent_object, CANFunctionBase &parent_function, CANFrame *can_frame);
 
 // CAN Function IDs
@@ -192,6 +199,16 @@ enum CAN_function_id_t : uint8_t
     CAN_FUNC_EVENT_ERROR = 0xE6,
 };
 
+enum CAN_function_result_t : uint8_t
+{
+    CAN_FRES_NONE = 0x00,
+    CAN_FRES_FRAME_IS_FORMED = 0x01,
+    CAN_FRES_WITHOUT_FRAME = 0x02,
+};
+
+using CAN_function_handler_t = CAN_function_result_t (*)(can_frame_t *can_frame);
+
+/*
 // CAN Function state codes
 enum CAN_function_state_t : uint8_t
 {
@@ -230,12 +247,13 @@ enum CAN_function_error_t : uint8_t
     CAN_FUNC_ERROR_CHUNK_SAVING = 0x0E,
     CAN_FUNC_ERROR_WRITE_FINISH = 0x0F,
 };
-
+*/
 /******************************************************************************************************************************
  *
  * Pixel related types
  *
  ******************************************************************************************************************************/
+/*
 enum pixel_error_section_t : uint8_t
 {
     PIX_ERR_NONE = 0x00,
@@ -248,5 +266,5 @@ enum pixel_error_section_t : uint8_t
     // not an error, just a flag that several frames was missed during the send raw process
     PIX_ERR_SEND_RAW_MISSED_FRAMES = 0xFF,
 };
-
+*/
 #endif // CAN_COMMON_H

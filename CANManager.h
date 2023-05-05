@@ -5,13 +5,13 @@
 #include "CAN_common.h"
 #include "CANObject.h"
 
-
 /******************************************************************************************
- * 
+ *
  ******************************************************************************************/
 class CANManagerInterface
 {
     using send_function_t = void (*)(can_id_t id, uint8_t *data, uint8_t length);
+
 public:
     virtual ~CANManagerInterface() = default;
 
@@ -19,16 +19,16 @@ public:
     /// @param can_object CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
     virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
-    
+
     /// @brief Registers low level function, that sends data via CAN bus
     /// @param can_send_func Pointer to the function
     virtual void RegisterSendFunction(send_function_t can_send_func) = 0;
-    
+
     /// @brief Performs CANObjects processing
     /// @param time Current time
     virtual void Process(uint32_t time) = 0;
 
-    /// @brief Processes incoming CAN frame (without any queues?)
+    /// @brief Processes incoming CAN frame (TODO: without any queues?)
     /// @param id CANObject ID from the CAN frame
     /// @param data Pointer to the data array
     /// @param length Data length
@@ -37,7 +37,7 @@ public:
 };
 
 /******************************************************************************************
- * 
+ *
  ******************************************************************************************/
 template <uint8_t _max_objects = 16>
 class CANManager
