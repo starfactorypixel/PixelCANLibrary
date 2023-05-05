@@ -28,7 +28,7 @@ public:
     /// @param time Current time
     virtual void Process(uint32_t time) = 0;
 
-    /// @brief Processes incoming CAN frame (TODO: without any queues?)
+    /// @brief Processes incoming CAN frame (without any queues?)
     /// @param id CANObject ID from the CAN frame
     /// @param data Pointer to the data array
     /// @param length Data length
