@@ -8,6 +8,8 @@
  ******************************************************************************************/
 class CANFunctionInterface
 {
+    using CAN_function_handler_t = CAN_function_result_t (*)(can_frame_t *can_frame);
+
 public:
     virtual ~CANFunctionInterface() = default;
 
@@ -20,5 +22,4 @@ public:
     /// @param can_frame Pointer to the CANFrame structure. It may be nullptr if function don't need incoming frame
     /// @return Returns function result
     virtual CAN_function_result_t Process(uint32_t time, can_frame_t *can_frame = nullptr) = 0;
-    
 };

@@ -3,6 +3,76 @@
 
 #include <stdint.h>
 
+enum data_field_attention_state_t : uint8_t
+{
+    DF_ATTENTION_STATE_NONE = 0x00,
+    DF_ATTENTION_STATE_NORMAL = 0x01,
+    DF_ATTENTION_STATE_WARNING = 0x02,
+    DF_ATTENTION_STATE_CRITICAL = 0x03,
+};
+
+// base CAN frame format uses 11-bit IDs (uint16)
+// extended CAN frame format uses 29-bit IDs (uint32)
+typedef uint16_t can_id_t;
+
+// CAN Function IDs
+enum CAN_function_id_t : uint8_t
+{
+    CAN_FUNC_NONE = 0x00,
+
+    CAN_FUNC_SET_IN = 0x01,
+    CAN_FUNC_SET_OUT_OK = 0x41,
+    CAN_FUNC_SET_OUT_ERR = 0xC1,
+
+    CAN_FUNC_REQUEST_IN = 0x11,
+    CAN_FUNC_REQUEST_OUT_OK = 0x51,
+    CAN_FUNC_REQUEST_OUT_ERR = 0xD1,
+
+    CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
+    CAN_FUNC_SEND_RAW_INIT_OUT_OK = 0x70,
+    CAN_FUNC_SEND_RAW_INIT_OUT_ERR = 0xF0,
+
+    CAN_FUNC_SEND_RAW_CHUNK_START_IN = 0x31,
+    CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK = 0x71,
+    CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR = 0xF1,
+
+    CAN_FUNC_SEND_RAW_CHUNK_DATA_IN = 0x32,
+    // CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_OK = not allowed,
+    CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR = 0xF2,
+
+    CAN_FUNC_SEND_RAW_CHUNK_END_IN = 0x33,
+    CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK = 0x73,
+    CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR = 0xF3,
+
+    CAN_FUNC_SEND_RAW_FINISH_IN = 0x34,
+    CAN_FUNC_SEND_RAW_FINISH_OUT_OK = 0x74,
+    CAN_FUNC_SEND_RAW_FINISH_OUT_ERR = 0xF4,
+
+    CAN_FUNC_TIMER_NORMAL = 0x61,
+    CAN_FUNC_TIMER_WARNING = 0x62,
+    CAN_FUNC_TIMER_CRITICAL = 0x63,
+
+    CAN_FUNC_SIMPLE_SENDER = 0xC0,
+
+    CAN_FUNC_EVENT_ERROR = 0xE6,
+};
+
+enum CAN_function_result_t : uint8_t
+{
+    CAN_FRES_NONE = 0x00,
+    CAN_FRES_FRAME_IS_FORMED = 0x01,
+    CAN_FRES_WITHOUT_FRAME = 0x02,
+};
+
+// CANFrame data structure
+// It can be changed to class later (in case we need it)
+struct __attribute__((__packed__)) can_frame_t
+{
+    CAN_function_id_t function_id;
+    uint8_t data[7];
+    uint8_t data_length;
+};
+
 /******************************************************************************************************************************
  *
  * Common CAN related types
@@ -51,7 +121,7 @@ enum data_field_state_t : uint8_t
     DFS_OK = 0x01,
     DFS_ERROR = 0xFF,
 };
-*/
+
 enum data_field_attention_state_t : uint8_t
 {
     DF_ATTENTION_STATE_NONE = 0x00,
@@ -59,7 +129,7 @@ enum data_field_attention_state_t : uint8_t
     DF_ATTENTION_STATE_WARNING = 0x02,
     DF_ATTENTION_STATE_CRITICAL = 0x03,
 };
-/*
+
 // external handlers for raw data fields
 // free space checker
 using raw_data_free_space_handler_t = bool (*)(uint32_t size_needed);
@@ -78,22 +148,13 @@ using raw_data_abort_operations_handler_t = bool (*)();
  * CANFrame types
  *
  ******************************************************************************************************************************/
+/*
 // #define CAN_MAX_PAYLOAD 8
 
 // base CAN frame format uses 11-bit IDs (uint16)
 // extended CAN frame format uses 29-bit IDs (uint32)
 typedef uint16_t can_id_t;
 
-// CANFrame data structure
-// It can be changed to class later (in case we need it)
-struct __attribute__((__packed__)) can_frame_t
-{
-    CAN_function_id_t function_id;
-    uint8_t data[7];
-    uint8_t data_length;
-};
-
-/*
 enum can_frame_error_codes_t : uint8_t
 {
     CAN_FRAME_OK = 0x00,
@@ -154,7 +215,7 @@ enum CAN_function_result_t : uint8_t
     // function processed all the things but won't to call next handler
     CAN_RES_FINAL = 0xFF,
 };
-*/
+
 // using CAN_function_handler_t = CAN_function_result_t (*)(CANObject &parent_object, CANFunctionBase &parent_function, CANFrame *can_frame);
 
 // CAN Function IDs
@@ -199,16 +260,6 @@ enum CAN_function_id_t : uint8_t
     CAN_FUNC_EVENT_ERROR = 0xE6,
 };
 
-enum CAN_function_result_t : uint8_t
-{
-    CAN_FRES_NONE = 0x00,
-    CAN_FRES_FRAME_IS_FORMED = 0x01,
-    CAN_FRES_WITHOUT_FRAME = 0x02,
-};
-
-using CAN_function_handler_t = CAN_function_result_t (*)(can_frame_t *can_frame);
-
-/*
 // CAN Function state codes
 enum CAN_function_state_t : uint8_t
 {
