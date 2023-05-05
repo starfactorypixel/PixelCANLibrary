@@ -104,8 +104,7 @@ enum can_frame_error_codes_t : uint8_t
  *
  ******************************************************************************************************************************/
 // The maximum number of DataFields in the CANObject
-#define CAN_OBJECT_DATA_FIELDS_MAX_COUNT 7
-
+/*
 enum can_object_state_t : uint8_t
 {
     COS_NOT_INITIALIZED = 0x00,
@@ -114,6 +113,7 @@ enum can_object_state_t : uint8_t
     COS_DATA_BUFFER_SIZE_ERROR = 0x03,
     COS_UNKNOWN_ERROR = 0xFF,
 };
+*/
 
 /******************************************************************************************************************************
  *

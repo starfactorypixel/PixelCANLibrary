@@ -42,7 +42,7 @@ public:
 
     virtual void InputPacket(packet_t &packet) = 0;
 
-    virtual uint16_t GetId() = 0;
+    virtual can_id_t GetId() = 0;
 
     virtual void GetBytes(uint8_t *bytes, uint8_t &length) = 0;
 
@@ -66,7 +66,7 @@ public:
         @param updateFunc Функция запроса обновления значения. В качестве параметра передаётся ссылка на новое значение.
             Если возвращает true, то немедленно отправляет новое значение в CAN, иначе дожидается своего интервала.
     */
-    CANObject(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input1_t inputFunc)
+    CANObject(can_id_t id, uint16_t update, uint16_t send, update_t updateFunc, input1_t inputFunc)
         : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc1(inputFunc), _use_raw(false)
     {
         _force_update = true;
@@ -74,7 +74,7 @@ public:
         return;
     }
 
-    CANObject(uint16_t id, uint16_t update, uint16_t send, update_t updateFunc, input2_t inputFunc)
+    CANObject(can_id_t id, uint16_t update, uint16_t send, update_t updateFunc, input2_t inputFunc)
         : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc2(inputFunc), _use_raw(true)
     {
         _force_update = true;
@@ -241,7 +241,7 @@ public:
     /*
         Вернуть CAN ID параметра.
     */
-    uint16_t GetId() override
+    can_id_t GetId() override
     {
         return _id;
     }
@@ -268,7 +268,7 @@ public:
     }
 
 private:
-    uint16_t _id;     // CAN ID параметра. 0x0000 .. 0x07FF.
+    can_id_t _id;     // CAN ID параметра. 0x0000 .. 0x07FF.
     uint16_t _update; // Интервал автоматического обновления значения.
     uint16_t _send;   // Интервал автоматической отправки значения в CAN.
 

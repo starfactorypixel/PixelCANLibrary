@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <cassert>
+#include "CAN_common.h"
 #include "CANObject.h"
 
 template <uint8_t _max_param = 16>
@@ -9,7 +10,7 @@ class CANManager
 {
     static const uint8_t _tick_time = 5;
 
-    using send_function_t = void (*)(uint16_t id, uint8_t *data, uint8_t length);
+    using send_function_t = void (*)(can_id_t id, uint8_t *data, uint8_t length);
 
 public:
     /// @brief
@@ -34,12 +35,12 @@ public:
     }
 
     /*
-    bool HasObject(uint16_t id)
+    bool HasObject(can_id_t id)
     {
         return ((id & _id_mask) == id);
     }
 
-    uint16_t GetMask()
+    can_id_t GetMask()
     {
         return _id_mask;
     }
@@ -76,7 +77,7 @@ public:
         @brief
         @return true если ID зарегистрирован, false если нет.
     */
-    bool InputPacket(uint16_t id, uint8_t *data, uint8_t length)
+    bool InputPacket(can_id_t id, uint8_t *data, uint8_t length)
     {
         bool result = false;
 
@@ -109,7 +110,7 @@ private:
 
     send_function_t _send_func;
 
-    // uint16_t _id_mask = 0b0000000000000000;
+    // can_id_t _id_mask = 0b0000000000000000;
 
     uint32_t _last_tick = 0;
 };
