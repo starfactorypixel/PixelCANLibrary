@@ -81,7 +81,6 @@ public:
 
 protected:
     void _set_state(can_object_state_t state);
-    DataField *_add_data_field(DataField *data_field);
 
 private:
     can_id_t _id = 0;
@@ -89,7 +88,7 @@ private:
     can_object_state_t _state = COS_UNKNOWN_ERROR;
     data_field_attention_state_t _max_attention_state = DF_ATTENTION_STATE_NONE;
 
-    std::list<DataField *> _data_fields_list;
+    DataField _data_fields_list[CAN_OBJECT_DATA_FIELDS_MAX_COUNT];
     std::list<CANFunctionBase *> _functions_list;
 
     // object name for logging

@@ -10,11 +10,10 @@
  ******************************************************************************************************************************/
 // 'unknown' for logging
 const char *DataField::_value_unknown = "unknown";
-const char *DataField::_source_type_name = "unknown";
 
 // the data field state names for logging
+const char *DataField::_state_data_field_not_initialized = "not initialized";
 const char *DataField::_state_data_field_ok = "ok";
-const char *DataField::_state_data_field_alarm = "alarm";
 const char *DataField::_state_data_field_error = "error";
 
 // the data field attention state name for logging
@@ -23,17 +22,30 @@ const char *DataField::_attention_state_normal = "normal";
 const char *DataField::_attention_state_warning = "warning";
 const char *DataField::_attention_state_critical = "critical";
 
-DataField::DataField(void *data, uint32_t array_item_count)
+// the data field type names for logging
+const char *DataField::_type_name_int8 = "int8";
+const char *DataField::_type_name_uint8 = "uint8";
+const char *DataField::_type_name_int16 = "int16";
+const char *DataField::_type_name_uint16 = "uint16";
+const char *DataField::_type_name_int32 = "int32";
+const char *DataField::_type_name_uint32 = "uint32";
+// const char *DataField::_type_name_raw_data_array = "multichunk raw data";
+
+DataField::DataField()
+    : _attention_state(DF_ATTENTION_STATE_NONE), _state(DFS_NOT_INITIALIZED), _source_type(DF_UNKNOWN),
+      _array_item_size(0), _array_item_count(0), _src_data_pointer(nullptr)
 {
-    delete_data_source();
-    delete_attention_checkers();
-    set_data_source(data, array_item_count);
+}
+
+DataField::DataField(data_field_t source_type, void *data, uint32_t array_item_count)
+    : DataField()
+{
+    set_data_source(source_type, data, array_item_count);
 }
 
 DataField::~DataField()
 {
-    delete_data_source();
-    delete_attention_checkers();
+    delete_data_field();
 }
 
 bool DataField::operator==(const DataField &other)
@@ -54,6 +66,12 @@ bool DataField::_equals(DataField const &other) const
     return (this->_source_type == other._source_type && this->_src_data_pointer == other._src_data_pointer && this->_array_item_count == other._array_item_count);
 }
 
+void DataField::delete_data_field()
+{
+    delete_data_source();
+    delete_attention_checkers();
+}
+
 void DataField::delete_data_source()
 {
     _src_data_pointer = nullptr;
@@ -61,21 +79,21 @@ void DataField::delete_data_source()
     _array_item_count = 0;
     _array_item_size = 0;
 
-    set_state(DFS_ERROR);
+    set_state(DFS_NOT_INITIALIZED);
     set_attention_state(DF_ATTENTION_STATE_NONE);
 }
 
-bool DataField::set_data_source(void *data, uint32_t array_item_count)
+bool DataField::set_data_source(data_field_t source_type, void *data, uint32_t array_item_count)
 {
     if (data == nullptr || array_item_count == 0)
     {
-        set_state(DFS_ERROR);
         return false;
     }
     delete_data_source();
 
     _array_item_count = array_item_count;
     _src_data_pointer = data;
+    _set_source_type(source_type);
 
     update_state();
 
@@ -99,6 +117,38 @@ bool DataField::has_data_source()
 void DataField::_set_source_type(data_field_t source_type)
 {
     _source_type = source_type;
+    switch (source_type)
+    {
+    case DF_INT8:
+        _set_item_size(sizeof(int8_t));
+        break;
+
+    case DF_UINT8:
+        _set_item_size(sizeof(uint8_t));
+        break;
+
+    case DF_INT16:
+        _set_item_size(sizeof(int16_t));
+        break;
+
+    case DF_UINT16:
+        _set_item_size(sizeof(uint16_t));
+        break;
+
+    case DF_INT32:
+        _set_item_size(sizeof(int32_t));
+        break;
+
+    case DF_UINT32:
+        _set_item_size(sizeof(uint32_t));
+        break;
+
+    // case DF_RAW_DATA_ARRAY:
+    case DF_UNKNOWN:
+    default:
+        delete_data_source();
+        break;
+    }
 }
 
 data_field_t DataField::get_source_type()
@@ -108,7 +158,36 @@ data_field_t DataField::get_source_type()
 
 const char *DataField::get_source_type_name()
 {
-    return this->_source_type_name;
+    switch (get_source_type())
+    {
+    case DF_INT8:
+        return _type_name_int8;
+
+    case DF_UINT8:
+        return _type_name_uint8;
+
+    case DF_INT16:
+        return _type_name_int16;
+
+    case DF_UINT16:
+        return _type_name_uint16;
+
+    case DF_INT32:
+        return _type_name_int32;
+
+    case DF_UINT32:
+        return _type_name_uint32;
+
+        /*
+        case DF_RAW_DATA_ARRAY:
+            return _type_name_raw_data_array;
+        */
+
+    case DF_UNKNOWN:
+    default:
+        break;
+    }
+    return _value_unknown;
 }
 
 uint32_t DataField::get_item_count()
@@ -202,10 +281,18 @@ bool DataField::has_errors()
     return get_state() == DFS_ERROR;
 }
 
+bool DataField::is_initialized()
+{
+    return get_state() != DFS_NOT_INITIALIZED;
+}
+
 const char *DataField::get_state_name()
 {
     switch (get_state())
     {
+    case DFS_NOT_INITIALIZED:
+        return _state_data_field_not_initialized;
+
     case DFS_OK:
         return _state_data_field_ok;
 
@@ -283,10 +370,45 @@ void DataField::print(const char *prefix)
     LOG("%sDataField: state = %s, attention = %s, item size = %d (%s), item count = %d", prefix, get_state_name(),
         get_attention_state_name(), get_item_size(), get_source_type_name(), get_item_count());
 
-    char str_buff[70] = {0};
-    sprintf(str_buff, "%s    ", prefix);
-    this->_print_handler(str_buff);
+    LOGwoN("%s    Data: [", prefix);
+    uint32_t items_count = get_item_count();
+    for (uint32_t i = 0; i < items_count; i++)
+    {
+        switch (get_source_type())
+        {
+        case DF_INT8:
+            LOGstring("%d%s", ((int8_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
 
+        case DF_UINT8:
+            LOGstring("%d%s", ((uint8_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
+
+        case DF_INT16:
+            LOGstring("%d%s", ((int16_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
+
+        case DF_UINT16:
+            LOGstring("%u%s", ((uint16_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
+
+        case DF_INT32:
+            LOGstring("%d%s", ((int32_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
+
+        case DF_UINT32:
+            LOGstring("%u%s", ((uint32_t *)_get_src_pointer())[i], (i == items_count - 1) ? "" : ", ");
+            break;
+
+        case DF_UNKNOWN:
+        default:
+            LOGstring("%s%s", "-", (i == items_count - 1) ? "" : ", ");
+            break;
+        }
+    }
+    LOGstring("]\n");
+
+    char str_buff[32] = {0};
     uint8_t count = 0;
     LOG("%s    Attention checkers: %s", prefix, _attention_checkers_list.empty() ? "no checkers" : "");
     for (DataFieldAttentionCheckerBase *checker : _attention_checkers_list)
@@ -301,6 +423,7 @@ void DataField::print(const char *prefix)
  * DataFieldInt8 class: implements int8 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldInt8::_source_type_name = "int8";
 
 DataFieldInt8::DataFieldInt8(void *data, uint32_t array_item_count)
@@ -330,12 +453,13 @@ void DataFieldInt8::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint8 class: implements uint8 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldUint8::_source_type_name = "uint8";
 
 DataFieldUint8::DataFieldUint8(void *data, uint32_t array_item_count)
@@ -365,12 +489,13 @@ void DataFieldUint8::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldInt16 class: implements uint16 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldInt16::_source_type_name = "int16";
 
 DataFieldInt16::DataFieldInt16(void *data, uint32_t array_item_count)
@@ -400,12 +525,13 @@ void DataFieldInt16::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint16 class: implements uint16 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldUint16::_source_type_name = "uint16";
 
 DataFieldUint16::DataFieldUint16(void *data, uint32_t array_item_count)
@@ -435,12 +561,13 @@ void DataFieldUint16::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldInt32 class: implements uint32 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldInt32::_source_type_name = "int32";
 
 DataFieldInt32::DataFieldInt32(void *data, uint32_t array_item_count)
@@ -470,12 +597,13 @@ void DataFieldInt32::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint32 class: implements uint32 data field
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldUint32::_source_type_name = "uint32";
 
 DataFieldUint32::DataFieldUint32(void *data, uint32_t array_item_count)
@@ -505,12 +633,13 @@ void DataFieldUint32::_print_handler(const char *prefix)
     }
     LOGstring("]\n");
 }
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldRawData class: implements data field with uint8 multichunk data array
  *
  ******************************************************************************************************************************/
+/*
 const char *DataFieldRawData::_source_type_name = "multichunk raw data";
 
 DataFieldRawData::DataFieldRawData(void *data, uint32_t array_item_count,
@@ -976,3 +1105,4 @@ void DataFieldRawData::_print_handler(const char *prefix)
     LOG("%s        close file and rename = %s", prefix, has_external_handler_close_file() ? "yes" : "no");
     LOG("%s        abort operations = %s", prefix, has_external_handler_abort() ? "yes" : "no");
 }
+*/

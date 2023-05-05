@@ -15,19 +15,21 @@
 class DataField
 {
 public:
-    DataField() = delete;
-    DataField(void *data, uint32_t array_item_count);
-    virtual ~DataField();
+    DataField();
+    DataField(data_field_t source_type, void *data, uint32_t array_item_count);
+    ~DataField();
 
     bool operator==(const DataField &other);
     bool operator!=(const DataField &other);
 
+    void delete_data_field();
+
     void delete_data_source();
-    bool set_data_source(void *data_source = nullptr, uint32_t array_item_count = 1);
+    bool set_data_source(data_field_t source_type, void *data_source, uint32_t array_item_count = 1);
     bool has_data_source();
 
     data_field_t get_source_type();
-    virtual const char *get_source_type_name();
+    const char *get_source_type_name();
 
     uint32_t get_item_count();
     uint8_t get_item_size();
@@ -37,8 +39,9 @@ public:
 
     data_field_state_t get_state();
     void set_state(data_field_state_t state);
-    virtual data_field_state_t update_state();
+    data_field_state_t update_state();
     bool has_errors();
+    bool is_initialized();
     const char *get_state_name();
 
     data_field_attention_state_t get_attention_state();
@@ -50,25 +53,23 @@ public:
     bool has_attention_checkers();
     void delete_attention_checkers();
 
-    virtual void print(const char *prefix);
+    void print(const char *prefix);
 
 protected:
-    virtual void _print_handler(const char *prefix) = 0;
-
     void _set_source_type(data_field_t source_type);
     void _set_item_size(uint8_t item_size);
     void *_get_src_pointer();
 
     // virtual method for correct and systematic comparison of derived classes
     // should be complement by derived class
-    virtual bool _equals(DataField const &other) const;
+    bool _equals(DataField const &other) const;
 
     // 'unknown' for logging
     static const char *_value_unknown;
 
     // the data field state names for logging
+    static const char *_state_data_field_not_initialized;
     static const char *_state_data_field_ok;
-    static const char *_state_data_field_alarm;
     static const char *_state_data_field_error;
 
     // the data field attention state name for logging
@@ -77,16 +78,23 @@ protected:
     static const char *_attention_state_warning;
     static const char *_attention_state_critical;
 
+    // the data field type names for logging
+    static const char *_type_name_int8;
+    static const char *_type_name_uint8;
+    static const char *_type_name_int16;
+    static const char *_type_name_uint16;
+    static const char *_type_name_int32;
+    static const char *_type_name_uint32;
+    // static const char *_type_name_raw_data_array;
+
 private:
-    data_field_attention_state_t _attention_state = DF_ATTENTION_STATE_NORMAL;
-    data_field_state_t _state; // the state of data field
+    data_field_attention_state_t _attention_state = DF_ATTENTION_STATE_NONE;
+    data_field_state_t _state = DFS_NOT_INITIALIZED; // the state of data field
     data_field_t _source_type = DF_UNKNOWN;
-    uint8_t _array_item_size = 0;   // size of one item of array; _type related
+    uint8_t _array_item_size = 0;   // size of one item of array; _source_type related
     uint32_t _array_item_count = 0; // number of items in the data source array; for single variable it is 1
 
     void *_src_data_pointer = nullptr;
-
-    static const char *_source_type_name;
 
     std::list<DataFieldAttentionCheckerBase *> _attention_checkers_list;
 };
@@ -96,6 +104,7 @@ private:
  * DataFieldInt8 class: implements int8 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldInt8 : public DataField
 {
 public:
@@ -110,12 +119,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint8 class: implements uint8 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldUint8 : public DataField
 {
 public:
@@ -130,12 +140,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldInt16 class: implements uint16 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldInt16 : public DataField
 {
 public:
@@ -150,12 +161,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint16 class: implements uint16 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldUint16 : public DataField
 {
 public:
@@ -170,12 +182,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldInt32 class: implements uint32 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldInt32 : public DataField
 {
 public:
@@ -190,12 +203,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldUint32 class: implements uint32 data field
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldUint32 : public DataField
 {
 public:
@@ -210,12 +224,13 @@ protected:
 private:
     static const char *_source_type_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * DataFieldRawData class: implements data field with uint8 multichunk data array
  *
  ******************************************************************************************************************************/
+/*
 class DataFieldRawData : public DataField
 {
 public:
@@ -352,5 +367,5 @@ private:
     // expected number of frames in the current chunk
     uint8_t _frames_count = 0;
 };
-
+*/
 #endif // DATAFIELD_H

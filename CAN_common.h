@@ -43,12 +43,16 @@ enum data_field_t : uint8_t
     DF_UINT16 = 0x04,
     DF_INT32 = 0x05,
     DF_UINT32 = 0x06,
-    DF_RAW_DATA_ARRAY = 0x07,
+
+    // TODO: this type of data fields is incompatible with static memory allocation
+    // we should to implement this functionality somewhere else
+    // DF_RAW_DATA_ARRAY = 0x07,
 };
 
 enum data_field_state_t : uint8_t
 {
-    DFS_OK = 0x00,
+    DFS_NOT_INITIALIZED = 0x00,
+    DFS_OK = 0x01,
     DFS_ERROR = 0xFF,
 };
 
@@ -97,6 +101,9 @@ enum can_frame_error_codes_t : uint8_t
  * CANObject related data types
  *
  ******************************************************************************************************************************/
+// The maximum number of DataFields in the CANObject
+#define CAN_OBJECT_DATA_FIELDS_MAX_COUNT 7
+
 enum can_object_state_t : uint8_t
 {
     COS_NOT_INITIALIZED = 0x00,

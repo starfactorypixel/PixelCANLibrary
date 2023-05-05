@@ -16,7 +16,6 @@ const char *CANObject::_state_unknown_error = "unknown error";
 CANObject::CANObject()
     : _id(0), _parent(nullptr), _state(COS_NOT_INITIALIZED), _name(nullptr)
 {
-    _data_fields_list.clear();
     _functions_list.clear();
 }
 
@@ -34,12 +33,13 @@ CANObject::~CANObject()
 
 void CANObject::delete_object()
 {
-    for (DataField *i : _data_fields_list)
+    for (DataField &i : _data_fields_list)
     {
-        if (i != nullptr)
-            delete i;
+        if (!i.is_initialized())
+            continue;
+
+        i.delete_data_field();
     }
-    _data_fields_list.clear();
 
     for (CANFunctionBase *i : _functions_list)
     {
@@ -90,7 +90,17 @@ uint32_t CANObject::get_tick()
 
 uint8_t CANObject::get_data_fields_count()
 {
-    return _data_fields_list.size();
+    uint8_t count = 0;
+    static_assert(CAN_OBJECT_DATA_FIELDS_MAX_COUNT <= 255); // static counter overflow check
+
+    for (DataField &i : _data_fields_list)
+    {
+        if (i.is_initialized())
+        {
+            ++count;
+        }
+    }
+    return count;
 }
 
 bool CANObject::has_data_fields()
@@ -98,86 +108,45 @@ bool CANObject::has_data_fields()
     return (get_data_fields_count() != 0);
 }
 
-DataField *CANObject::_add_data_field(DataField *data_field)
-{
-    _data_fields_list.push_back(data_field);
-
-    update_state();
-
-    return data_field;
-}
-
 DataField *CANObject::add_data_field(data_field_t type, void *data, uint32_t array_item_count)
 {
-    DataField *new_data_field = nullptr;
-
-    switch (type)
+    for (DataField &i : _data_fields_list)
     {
-    case DF_INT8:
-        new_data_field = new DataFieldInt8(data, array_item_count);
-        break;
+        if (i.is_initialized())
+            continue;
 
-    case DF_UINT8:
-        new_data_field = new DataFieldUint8(data, array_item_count);
-        break;
-
-    case DF_INT16:
-        new_data_field = new DataFieldInt16(data, array_item_count);
-        break;
-
-    case DF_UINT16:
-        new_data_field = new DataFieldUint16(data, array_item_count);
-        break;
-
-    case DF_INT32:
-        new_data_field = new DataFieldInt32(data, array_item_count);
-        break;
-
-    case DF_UINT32:
-        new_data_field = new DataFieldUint32(data, array_item_count);
-        break;
-
-    case DF_RAW_DATA_ARRAY:
-        new_data_field = new DataFieldRawData(data, array_item_count);
-        break;
-
-    case DF_UNKNOWN:
-    default:
-        break;
+        if (i.set_data_source(type, data, array_item_count))
+            return &i;
     }
-
-    if (new_data_field != nullptr)
-    {
-        new_data_field = _add_data_field(new_data_field);
-        new_data_field->update_state();
-    }
-    update_state();
-    return new_data_field;
+    return nullptr;
 }
 
 bool CANObject::delete_data_field(uint8_t index)
 {
-    if (index >= get_data_fields_count())
+    if (index >= CAN_OBJECT_DATA_FIELDS_MAX_COUNT)
         return false;
 
-    std::list<DataField *>::iterator it = _data_fields_list.begin();
-    std::advance(it, index);
-    _data_fields_list.erase(it);
+    if (_data_fields_list[index].is_initialized())
+    {
+        _data_fields_list[index].delete_data_field();
+        update_state();
+        return true;
+    }
 
-    update_state();
-
-    return true;
+    return false;
 }
 
 DataField *CANObject::get_data_field(uint8_t index)
 {
-    if (index >= get_data_fields_count())
+    if (index >= CAN_OBJECT_DATA_FIELDS_MAX_COUNT)
         return nullptr;
 
-    std::list<DataField *>::iterator it = _data_fields_list.begin();
-    std::advance(it, index);
+    if (_data_fields_list[index].is_initialized())
+    {
+        return &_data_fields_list[index];
+    }
 
-    return *it;
+    return nullptr;
 }
 
 /*
@@ -186,6 +155,9 @@ bool CANObject::has_data_fields_alarm()
     // TODO: alarm refactoring needed!
     for (DataField &i : _data_fields_list)
     {
+        if (!i.is_initialized())
+            continue;
+
         i.update_state();
         if (i.has_alarm_state())
             return true;
@@ -200,9 +172,12 @@ uint8_t CANObject::calculate_all_data_size()
         return 0;
 
     uint8_t result = 0;
-    for (DataField *i : _data_fields_list)
+    for (DataField &i : _data_fields_list)
     {
-        result += i->get_data_byte_array_length();
+        if (!i.is_initialized())
+            continue;
+
+        result += i.get_data_byte_array_length();
     }
 
     // 1 additional byte for FUNC_TYPE
@@ -284,12 +259,15 @@ can_object_state_t CANObject::update_state()
     if (has_data_fields())
     {
         _max_attention_state = DF_ATTENTION_STATE_NORMAL;
-        for (DataField *i : _data_fields_list)
+        for (DataField &i : _data_fields_list)
         {
-            i->update_state();
-            if (i->get_attention_state() > _max_attention_state)
+            if (!i.is_initialized())
+                continue;
+
+            i.update_state();
+            if (i.get_attention_state() > _max_attention_state)
             {
-                _max_attention_state = i->get_attention_state();
+                _max_attention_state = i.get_attention_state();
             }
         }
 
@@ -332,11 +310,14 @@ void CANObject::print(const char *prefix)
     uint8_t count = 0;
     char str_buff[70] = {0};
 
-    LOG("%s    Data fields: %s", prefix, _data_fields_list.empty() ? "no data fields" : "");
-    for (DataField *i : _data_fields_list)
+    LOG("%s    Data fields: %s", prefix, (get_data_fields_count() == 0) ? "no data fields" : "");
+    for (DataField &i : _data_fields_list)
     {
+        if (!i.is_initialized())
+            continue;
+
         sprintf(str_buff, "%s        #%d ", prefix, ++count);
-        i->print(str_buff);
+        i.print(str_buff);
     }
 
     LOG("%s    Functions: %s", prefix, _functions_list.empty() ? "no functions" : "");
@@ -353,11 +334,14 @@ DataField *CANObject::get_first_erroneous_data_field()
     if (!has_data_fields())
         return nullptr;
 
-    for (DataField *i : _data_fields_list)
+    for (DataField &i : _data_fields_list)
     {
-        i->update_state();
-        if (i->has_errors())
-            return i;
+        if (!i.is_initialized())
+            continue;
+
+        i.update_state();
+        if (i.has_errors())
+            return &i;
     }
 
     return nullptr;
@@ -417,76 +401,78 @@ CANFunctionBase *CANObject::add_function(CAN_function_id_t func_id)
         cf->set_id(CAN_FUNC_REQUEST_OUT_ERR);
         break;
 
-    case CAN_FUNC_SEND_RAW_INIT_IN:
-        cf = new CANFunctionSendInit(this);
-        // next OK and ERROR handlers are created by constructor
-        break;
+        /*
+        case CAN_FUNC_SEND_RAW_INIT_IN:
+            cf = new CANFunctionSendInit(this);
+            // next OK and ERROR handlers are created by constructor
+            break;
 
-    case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
-        break;
+        case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_OK);
+            break;
 
-    case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
-        break;
+        case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_INIT_OUT_ERR);
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
-        cf = new CANFunctionChunkStart(this);
-        // next OK and ERROR handlers are created by constructor
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
+            cf = new CANFunctionChunkStart(this);
+            // next OK and ERROR handlers are created by constructor
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK);
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR);
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
-        cf = new CANFunctionChunkData(this);
-        // next ERROR handler is created by constructor
-        // next OK handler is forbidden
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
+            cf = new CANFunctionChunkData(this);
+            // next ERROR handler is created by constructor
+            // next OK handler is forbidden
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR);
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
-        cf = new CANFunctionChunkEnd(this);
-        // next OK and ERROR handlers are created by constructor
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
+            cf = new CANFunctionChunkEnd(this);
+            // next OK and ERROR handlers are created by constructor
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK);
+            break;
 
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
-        break;
+        case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR);
+            break;
 
-    case CAN_FUNC_SEND_RAW_FINISH_IN:
-        cf = new CANFunctionSendFinish(this);
-        // next OK and ERROR handlers are created by constructor
-        break;
+        case CAN_FUNC_SEND_RAW_FINISH_IN:
+            cf = new CANFunctionSendFinish(this);
+            // next OK and ERROR handlers are created by constructor
+            break;
 
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
-        break;
+        case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_OK);
+            break;
 
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
-        cf = new CANFunctionSimpleSender(this);
-        cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
-        break;
+        case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
+            cf = new CANFunctionSimpleSender(this);
+            cf->set_id(CAN_FUNC_SEND_RAW_FINISH_OUT_ERR);
+            break;
+        */
 
     case CAN_FUNC_TIMER_NORMAL:
         cf = new CANFunctionTimerNormal(this, UINT32_MAX);
@@ -569,8 +555,11 @@ bool CANObject::fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t 
     uint8_t destination_offset = 1;
     int16_t remaining_data = 0;
     uint8_t *data_pointer = can_frame.get_data_pointer() + destination_offset;
-    for (DataField *i : _data_fields_list)
+    for (DataField &i : _data_fields_list)
     {
+        if (!i.is_initialized())
+            continue;
+
         remaining_data = can_frame.get_max_data_length() - destination_offset;
         if (remaining_data <= 0)
         {
@@ -578,14 +567,14 @@ bool CANObject::fill_can_frame_with_data(CANFrame &can_frame, CAN_function_id_t 
             return false;
         }
 
-        i->update_state();
-        if (i->has_errors())
+        i.update_state();
+        if (i.has_errors())
             return false;
 
-        i->copy_data_to(data_pointer, remaining_data);
+        i.copy_data_to(data_pointer, remaining_data);
 
-        data_pointer += i->get_data_byte_array_length();
-        destination_offset += i->get_data_byte_array_length();
+        data_pointer += i.get_data_byte_array_length();
+        destination_offset += i.get_data_byte_array_length();
     }
     can_frame.set_data_length(calculate_all_data_size());
     can_frame.set_function_id(func_id);

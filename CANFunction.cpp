@@ -599,15 +599,17 @@ const char *CANFunctionSimpleEvent::get_name()
 // before timeout _last_action_tick update we should check if there any alarm
 CAN_function_result_t CANFunctionSimpleEvent::_default_handler(CANFrame *can_frame)
 {
-    CANObject &can_object = *get_parent();
+    #warning Alarm refactoring should be done
 
     /* TODO: alarm refactoring should be done
+    CANObject &can_object = *get_parent();
+    
     if (!can_object.has_data_fields_alarm())
         return CAN_RES_FINAL;
     */
     return CAN_RES_FINAL; // TODO: temporary disable events, event will not spam with messages
 
-    return CANFunctionTimerBase::_default_handler(can_frame);
+    // return CANFunctionTimerBase::_default_handler(can_frame);
 }
 
 // virtual function for correct and systematic comparison of derived classes
@@ -734,6 +736,7 @@ CAN_function_result_t CANFunctionSet::_default_handler(CANFrame *can_frame)
  * CANFunctionSendRawBase: base function for all the family of the send raw functions
  *
  ******************************************************************************************************************************/
+/*
 CANFunctionSendRawBase::CANFunctionSendRawBase(CAN_function_id_t id, CANObject *parent, CAN_function_handler_t external_handler,
                                                CANFunctionBase *next_ok_function, CANFunctionBase *next_err_function)
     : CANFunctionBase(id, parent, external_handler, next_ok_function, next_err_function)
@@ -855,12 +858,13 @@ CAN_function_result_t CANFunctionSendRawBase::_default_handler(CANFrame *can_fra
     this->_set_functions_family_states(send_raw_handler_result);
     return send_raw_handler_result;
 }
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionSendInit: function which starts send raw data sequence
  *
  ******************************************************************************************************************************/
+/*
 const char *CANFunctionSendInit::_name = "CANFunctionSendInit";
 
 CANFunctionSendInit::CANFunctionSendInit(CANObject *parent, CAN_function_handler_t external_handler,
@@ -964,7 +968,7 @@ CAN_function_result_t CANFunctionSendInit::_send_raw_handler(CANFrame *can_frame
 
     // outgoing frame generation
     can_frame->clear_frame();
-    can_frame->set_frame(co.get_id(), 2, /*func id will be rewrited by sender*/ 0, final_chunk_size);
+    can_frame->set_frame(co.get_id(), 2, 0, final_chunk_size);
 
     return CAN_RES_NEXT_OK;
 }
@@ -988,12 +992,13 @@ void CANFunctionSendInit::_set_functions_family_states(CAN_function_result_t sen
     can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
     can_func->suspend();
 }
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkStart: it initiates the process of chunk receiving
  *
  ******************************************************************************************************************************/
+/*
 const char *CANFunctionChunkStart::_name = "CANFunctionChunkStart";
 
 CANFunctionChunkStart::CANFunctionChunkStart(CANObject *parent, CAN_function_handler_t external_handler,
@@ -1098,7 +1103,7 @@ CAN_function_result_t CANFunctionChunkStart::_send_raw_handler(CANFrame *can_fra
     }
 
     can_frame->clear_frame();
-    can_frame->set_frame(co.get_id(), 1, /*func id will be rewrited by sender*/ 0);
+    can_frame->set_frame(co.get_id(), 1, 0);
 
     return CAN_RES_NEXT_OK;
 }
@@ -1122,12 +1127,13 @@ void CANFunctionChunkStart::_set_functions_family_states(CAN_function_result_t s
     can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
     (send_raw_handler_result == CAN_RES_NEXT_OK) ? can_func->enable() : can_func->suspend();
 }
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkData: it receives small portion of chunk data (can frame with data)
  *
  ******************************************************************************************************************************/
+/*
 const char *CANFunctionChunkData::_name = "CANFunctionChunkData";
 
 CANFunctionChunkData::CANFunctionChunkData(CANObject *parent, CAN_function_handler_t external_handler,
@@ -1241,12 +1247,13 @@ void CANFunctionChunkData::_set_functions_family_states(CAN_function_result_t se
     can_func = co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN);
     (send_raw_handler_result != CAN_RES_NEXT_OK) ? can_func->suspend() : can_func->enable();
 }
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkEnd: it finalizes the process of chunk receiving
  *
  ******************************************************************************************************************************/
+/*
 const char *CANFunctionChunkEnd::_name = "CANFunctionChunkEnd";
 
 CANFunctionChunkEnd::CANFunctionChunkEnd(CANObject *parent, CAN_function_handler_t external_handler,
@@ -1412,12 +1419,13 @@ void CANFunctionChunkEnd::_set_functions_family_states(CAN_function_result_t sen
     // own state
     co.get_function(CAN_FUNC_SEND_RAW_CHUNK_END_IN)->suspend();
 }
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionSendFinish: finalizes send raw data sequence
  *
  ******************************************************************************************************************************/
+/*
 const char *CANFunctionSendFinish::_name = "CANFunctionSendFinish";
 
 CANFunctionSendFinish::CANFunctionSendFinish(CANObject *parent, CAN_function_handler_t external_handler,
@@ -1536,3 +1544,4 @@ void CANFunctionSendFinish::_set_functions_family_states(CAN_function_result_t s
     // own state - CAN_FUNC_SEND_RAW_FINISH_IN
     this->enable();
 }
+*/

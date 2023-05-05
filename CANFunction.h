@@ -369,6 +369,7 @@ private:
  * CANFunctionSendRawBase: base function for all the family of the send raw functions
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionSendRawBase : public CANFunctionBase
 {
 public:
@@ -396,12 +397,13 @@ protected:
     // it sets states of all family of send raw functions after _send_raw_handler() call
     virtual void _set_functions_family_states(CAN_function_result_t send_raw_handler_result) = 0;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionSendInit: function which starts send raw data sequence
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionSendInit : public CANFunctionSendRawBase
 {
 public:
@@ -422,12 +424,13 @@ protected:
 private:
     static const char *_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkStart: it initiates the process of chunk receiving
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionChunkStart : public CANFunctionSendRawBase
 {
 public:
@@ -448,12 +451,13 @@ protected:
 private:
     static const char *_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkData: it receives small portion of chunk data (can frame with data)
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionChunkData : public CANFunctionSendRawBase
 {
 public:
@@ -474,12 +478,13 @@ protected:
 private:
     static const char *_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionChunkEnd: it finalizes the process of chunk receiving
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionChunkEnd : public CANFunctionSendRawBase
 {
 public:
@@ -500,12 +505,13 @@ protected:
 private:
     static const char *_name;
 };
-
+*/
 /******************************************************************************************************************************
  *
  * CANFunctionSendFinish: finalizes send raw data sequence
  *
  ******************************************************************************************************************************/
+/*
 class CANFunctionSendFinish : public CANFunctionSendRawBase
 {
 public:
@@ -526,5 +532,5 @@ protected:
 private:
     static const char *_name;
 };
-
+*/
 #endif // CANFUNCTION_H
