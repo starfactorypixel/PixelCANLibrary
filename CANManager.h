@@ -41,6 +41,7 @@ public:
 template <uint8_t _max_objects = 16>
 class CANManager
 {
+    static_assert(_max_objects > 0); // 0 objects is not allowed
 public:
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
