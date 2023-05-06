@@ -12,20 +12,20 @@ class CANObjectInterface
 public:
     virtual ~CANObjectInterface() = default;
 
-    /// @brief 
-    /// @param event_handler 
+    /// @brief
+    /// @param event_handler
     virtual void RegisterFunctionEvent(event_handler_t event_handler) = 0;
-    
-    /// @brief 
-    /// @param set_handler 
+
+    /// @brief
+    /// @param set_handler
     virtual void RegisterFunctionSet(set_handler_t set_handler) = 0;
-    
-    /// @brief 
-    /// @param timer_handler 
+
+    /// @brief
+    /// @param timer_handler
     virtual void RegisterFunctionTimer(timer_handler_t timer_handler) = 0;
-    
-    /// @brief 
-    /// @param request_handler 
+
+    /// @brief
+    /// @param request_handler
     virtual void RegisterFunctionRequest(request_handler_t request_handler) = 0;
 
     /// @brief Performs CANObjects processing
@@ -41,11 +41,11 @@ public:
     /// @return Returns CANObject ID
     virtual can_object_id_t GetId() = 0;
 
-    /// @brief 
-    /// @param index 
-    /// @param value 
-    /// @param timer_type 
-    /// @param event_type 
+    /// @brief
+    /// @param index
+    /// @param value
+    /// @param timer_type
+    /// @param event_type
     virtual void SetValue(uint8_t index, void *value,
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) = 0;
@@ -57,6 +57,7 @@ public:
 template <typename T, uint8_t _item_count = 1>
 class CANObject : public CANObjectInterface
 {
+    static_assert(_item_count > 0); // 0 data fields isn't allowed
 public:
     CANObject() = delete;
 
@@ -129,11 +130,11 @@ public:
     };
 
     // TODO: don't like it =( State for timer... Ok-event (send immediately)... Error-event (need error section & code)...
-    /// @brief 
-    /// @param index 
-    /// @param value 
-    /// @param timer_type 
-    /// @param event_type 
+    /// @brief
+    /// @param index
+    /// @param value
+    /// @param timer_type
+    /// @param event_type
     virtual void SetValue(uint8_t index, void *value,
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) override
@@ -153,10 +154,25 @@ public:
         //  Если для двери мы прочитали 200 вместо 1/0, то это событие будет иметь приоритет. С CAN будет отправлено сообщение об ошибке.
         //  При этом пока ошибка не будет устранена, никакие события открытия дверей отправлять в шину не будут...
         //
-        if (value == nullptr || index >= _item_count)
+        if (value == nullptr)
             return;
 
-        _data_fields[index] = *(T *)value;
+        SetValue(index, *(T *)value, timer_type, event_type);
+    };
+
+    /// @brief The variation of SetValue() method with typed value parameter.
+    /// @param index
+    /// @param value
+    /// @param timer_type
+    /// @param event_type
+    void SetValue(uint8_t index, T value,
+                  timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
+                  event_type_t event_type = CAN_EVENT_TYPE_NONE)
+    {
+        if (index >= _item_count)
+            return;
+
+        _data_fields[index] = value;
         _states_of_data_fields[index] = timer_type | event_type;
     };
 
@@ -175,17 +191,17 @@ private:
     uint16_t _timer_period = UINT16_MAX;
     uint16_t _error_period = UINT16_MAX;
 
-    /// @brief 
-    /// @param can_frame 
+    /// @brief
+    /// @param can_frame
     void _ClearCanFrame(can_frame_t &can_frame)
     {
         memset(&can_frame, 0, sizeof(can_frame));
         can_frame.initialized = false;
     }
 
-    /// @brief 
-    /// @param event_type 
-    /// @param can_frame 
+    /// @brief
+    /// @param event_type
+    /// @param can_frame
     void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame)
     {
         // _ClearCanFrame(can_frame);
@@ -213,9 +229,9 @@ private:
         }
     }
 
-    /// @brief 
-    /// @param timer_type 
-    /// @param can_frame 
+    /// @brief
+    /// @param timer_type
+    /// @param can_frame
     void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame)
     {
         // _ClearCanFrame(can_frame);
