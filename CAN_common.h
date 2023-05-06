@@ -140,11 +140,6 @@ struct __attribute__((__packed__)) can_frame_t
 // otherwise we need to update can_frame_t structure
 static_assert(sizeof(can_function_id_t) == 1);
 
-using request_handler_t = void (*)(can_frame_t &can_frame);
-using timer_handler_t = void (*)(can_frame_t &can_frame);
-using set_handler_t = void (*)(can_frame_t &can_frame);
-using event_handler_t = void (*)(can_frame_t &can_frame);
-
 // #define CAN_TIMER_TYPE_MASK 0b00001111
 enum timer_type_t : uint8_t
 {
@@ -222,5 +217,37 @@ const char *get_event_type_name(event_type_t event_type)
     return "";
 }
 #endif
+
+enum error_section_t : uint8_t
+{
+    ERROR_SECTION_NONE = 0x00,
+    ERROR_SECTION_CAN_MANAGER = 0x01,
+    ERROR_SECTION_CAN_OBJECT = 0x02,
+};
+
+enum error_code_object_t : uint8_t
+{
+    ERROR_CODE_OBJECT_NONE = 0x00,
+    ERROR_CODE_OBJECT_UNSUPPORTED_EVENT_TYPE = 0x01,
+    ERROR_CODE_OBJECT_UNSUPPORTED_TIMER_TYPE = 0x02,
+    ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING = 0x03,
+    ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION = 0x04,
+
+    ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code 
+};
+
+struct error_t
+{
+    error_section_t error_section;
+    uint8_t error_code;
+};
+
+using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type, error_t &error);
+using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, error_t &error);
+using request_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
+using set_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
+
+
+
 
 #endif // CAN_COMMON_H
