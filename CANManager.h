@@ -84,16 +84,17 @@ public:
 
         _last_tick = time;
 
-        uint8_t flags;
         can_frame_t can_frame;
+        error_t error;
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
             can_frame.initialized = false;
-            _objects[i]->Process(time, can_frame);
-            if (can_frame.initialized)
+            _objects[i]->Process(time, can_frame, error);
+            if (!can_frame.initialized && error.error_section != ERROR_SECTION_NONE)
             {
-                _SendCanData(*_objects[i], can_frame);
+                _FillErrorCanFrame(can_frame, error);
             }
+            _SendCanData(*_objects[i], can_frame);
         }
     }
 
@@ -107,24 +108,25 @@ public:
         if (length == 0)
             return false;
 
-        for (uint8_t i = 0; i < _objects_idx; ++i)
+        CANObjectInterface *can_object = GetCanObject(id);
+        if (can_object == nullptr)
+            return false;
+
+        error_t error = {0};
+        can_frame_t can_frame = {0};
+        can_frame.raw_data_length = length;
+        memcpy(&can_frame.raw_data, data, length);
+        can_frame.initialized = true;
+
+        can_object->InputCanFrame(can_frame, error);
+
+        if (!can_frame.initialized && error.error_section != ERROR_SECTION_NONE)
         {
-            if (_objects[i]->GetId() != id)
-                continue;
-
-            can_frame_t can_frame;
-            can_frame.raw_data_length = length;
-            // can_frame.function_id = data[0];
-            memcpy(&can_frame.raw_data, data, length);
-
-            _objects[i]->InputCanFrame(can_frame);
-
-            _SendCanData(*_objects[i], can_frame);
-
-            return true;
+            _FillErrorCanFrame(can_frame, error);
         }
+        _SendCanData(*can_object, can_frame);
 
-        return false;
+        return true;
     }
 
 private:
@@ -149,5 +151,20 @@ private:
             return;
 
         _send_func(can_object.GetId(), can_frame.raw_data, can_frame.raw_data_length);
+    }
+
+    void _FillErrorCanFrame(can_frame_t &can_frame, error_t error)
+    {
+        if (error.error_section == ERROR_SECTION_NONE)
+        {
+            can_frame.initialized = false;
+            return;
+        }
+
+        can_frame.initialized = true;
+        can_frame.function_id = CAN_FUNC_EVENT_ERROR;
+        can_frame.data[0] = error.error_section;
+        can_frame.data[1] = error.error_code;
+        can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(error_t);
     }
 };
