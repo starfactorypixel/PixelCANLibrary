@@ -9,40 +9,21 @@
 /******************************************************************************************
  *
  ******************************************************************************************/
-class CANManagerInterface
-{
-public:
-    virtual ~CANManagerInterface() = default;
-
-    /// @brief Registers specified CANObject
-    /// @param can_object CANObject for registration
-    /// @return 'true' if registration was successful, 'false' if not
-    virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
-
-    /// @brief Registers low level function, that sends data via CAN bus
-    /// @param can_send_func Pointer to the function
-    virtual void RegisterSendFunction(can_send_function_t can_send_func) = 0;
-
-    /// @brief Performs CANObjects processing
-    /// @param time Current time
-    virtual void Process(uint32_t time) = 0;
-
-    /// @brief Processes incoming CAN frame (without any queues?)
-    /// @param id CANObject ID from the CAN frame
-    /// @param data Pointer to the data array
-    /// @param length Data length
-    /// @return true if CANObject with ID is registered, false if not
-    virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) = 0;
-};
-
-/******************************************************************************************
- *
- ******************************************************************************************/
 template <uint8_t _max_objects = 16>
 class CANManager
 {
     static_assert(_max_objects > 0); // 0 objects is not allowed
 public:
+    /// @brief Default constructor disabled
+    CANManager() = delete;
+    
+    /// @brief Creates CANManager and specifies external function, which sends CAN frames 
+    /// @param can_send_func Pointer to an external CAN frames sending handler
+    CANManager(can_send_function_t can_send_func)
+    {
+        RegisterSendFunction(can_send_func);
+    };
+
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
@@ -60,6 +41,8 @@ public:
     /// @param can_send_func Pointer to the function
     void RegisterSendFunction(can_send_function_t can_send_func)
     {
+        if (can_send_func == nullptr)
+            return;
         _send_func = can_send_func;
     }
 
