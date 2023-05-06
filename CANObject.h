@@ -1,54 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include "CANDataField.h"
-#include "CANFunction.h"
-
-/******************************************************************************************
- *
- ******************************************************************************************/
-class CANObjectInterfaceMock
-{
-public:
-    virtual ~CANObjectInterfaceMock() = default;
-
-    /// @brief Registers CANObject's data field
-    /// @param data_field CANDataField for registration
-    /// @return 'true' if registration was successful, 'false' if not
-    virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) = 0;
-
-    /// @brief Registers CANObject's CANFunction
-    /// @param data_field CANFunction for registration
-    /// @return 'true' if registration was successful, 'false' if not
-    virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) = 0;
-
-    /// @brief Performs CANObjects processing
-    /// @param time Current time
-    virtual void Process(uint32_t time) = 0;
-};
-
-/******************************************************************************************
- *
- ******************************************************************************************/
-template <uint8_t _max_data_fields = 7, uint8_t _max_functions = 16>
-class CANObjectMock : CANObjectInterfaceMock
-{
-public:
-    virtual ~CANObjectMock() = default;
-
-    virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) override { return false; };
-    virtual bool RegisterCANFunction(CANFunctionInterface &can_cunction) override { return false; };
-    virtual void Process(uint32_t time) override{};
-
-private:
-    CANDataFieldInterface *_data_fields[_max_data_fields];
-    uint8_t _data_fields_idx = 0;
-    static_assert(_max_data_fields <= UINT8_MAX); // static _data_fields_idx overflow check
-
-    CANFunctionInterface *_can_functions[_max_functions];
-    uint8_t _can_functions_idx = 0;
-    static_assert(_max_functions <= UINT8_MAX); // static _can_functions_idx overflow check
-};
+#include <string.h>
+#include "CAN_common.h"
 
 /******************************************************************************************
  *
@@ -56,287 +10,219 @@ private:
 class CANObjectInterface
 {
 public:
-    enum response_t : uint8_t
-    {
-        RESP_NONE,
-        RESP_OK,
-        RESP_ERROR,
-    };
-
-    enum error_t : uint8_t
-    {
-        ERROR_NONE,
-        ERROR_LOW_CURRENT,
-        ERROR_HIGH_CURRENT,
-        ERROR_LEAKAGE_CURRENT,
-    };
-
-    enum event_t : uint8_t
-    {
-        EVENT_NONE = 0x00,
-        EVENT_NORMAL = 0xE1,
-        EVENT_WARNING = 0xE2,
-        EVENT_CRITICAL = 0xE3,
-        EVENT_ERROR = 0xE6,
-    };
-
-    struct __attribute__((__packed__)) packet_t
-    {
-        uint8_t length;
-        uint8_t type;
-        uint8_t data[7];
-    };
-
     virtual ~CANObjectInterface() = default;
 
-    virtual uint8_t Processing(uint32_t time, packet_t &packet) = 0;
+    /// @brief Registers CANObject's data field
+    /// @param data_field CANDataField for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    // virtual bool RegisterCANDataField(CANDataFieldInterface &data_field) = 0;
 
-    virtual void InputPacket(packet_t &packet) = 0;
+    /// @brief Registers CANObject's CANFunction
+    /// @param data_field CANFunction for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    // virtual bool RegisterCANFunction(CANFunctionInterface &can_function) = 0;
 
-    virtual can_id_t GetId() = 0;
+    virtual void RegisterFunctionEvent(event_handler_t event_handler) = 0;
+    virtual void RegisterFunctionSet(set_handler_t set_handler) = 0;
+    virtual void RegisterFunctionTimer(timer_handler_t timer_handler) = 0;
+    virtual void RegisterFunctionRequest(request_handler_t request_handler) = 0;
 
-    virtual void GetBytes(uint8_t *bytes, uint8_t &length) = 0;
+    /// @brief Performs CANObjects processing
+    /// @param time Current time
+    /// @param can_frame CAN frame for storing the outgoing data
+    virtual void Process(uint32_t time, can_frame_t &can_frame) = 0;
 
-    // virtual void SetBytes(uint8_t *bytes, uint8_t length) = 0;
+    /// @brief Process incoming CAN frame
+    /// @param can_frame CAN frame for processing
+    virtual void InputCanFrame(can_frame_t &can_frame) = 0;
+
+    /// @brief Returns CANObject ID
+    /// @return Returns CANObject ID
+    virtual can_object_id_t GetId() = 0;
+
+    virtual void SetValue(uint8_t index, void *value,
+                          timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
+                          event_type_t event_type = CAN_EVENT_TYPE_NONE) = 0;
 };
 
 /******************************************************************************************
  *
  ******************************************************************************************/
-template <typename T>
+template <typename T, uint8_t _item_count = 1>
 class CANObject : public CANObjectInterface
 {
-    using update_t = event_t (*)(T &value, error_t &error);
-    using input1_t = response_t (*)(T &value, error_t &error);
-    using input2_t = response_t (*)(packet_t &packet, error_t &error);
-    // typedef std::function<response_t(T &value)> input_t;
-
 public:
-    /*
-        @brief .................
-        @param id CAN ID;
-        @param update Время обновления значение, мс.
-        @param send Время автоотправки значения в CAN, мс. 0 для отключения.
-        @param updateFunc Функция запроса обновления значения. В качестве параметра передаётся ссылка на новое значение.
-            Если возвращает true, то немедленно отправляет новое значение в CAN, иначе дожидается своего интервала.
-    */
-    CANObject(can_id_t id, uint16_t update, uint16_t send, update_t updateFunc, input1_t inputFunc)
-        : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc1(inputFunc), _use_raw(false)
+    CANObject() = delete;
+
+    CANObject(can_object_id_t id, uint16_t timer_period_ms, uint16_t error_period_ms)
+        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms){};
+
+    virtual ~CANObject() = default;
+
+    virtual void RegisterFunctionEvent(event_handler_t event_handler) override{};
+
+    virtual void RegisterFunctionSet(set_handler_t set_handler) override{};
+
+    virtual void RegisterFunctionTimer(timer_handler_t timer_handler) override{};
+
+    virtual void RegisterFunctionRequest(request_handler_t request_handler) override{};
+
+    /// @brief Performs CANObjects processing
+    /// @param time Current time
+    /// @param can_frame OUT: CAN frame for storing the outgoing data
+    virtual void Process(uint32_t time, can_frame_t &can_frame) override
     {
-        _force_update = true;
-
-        return;
-    }
-
-    CANObject(can_id_t id, uint16_t update, uint16_t send, update_t updateFunc, input2_t inputFunc)
-        : _id(id), _update(update), _send(send), _updateFunc(updateFunc), _inputFunc2(inputFunc), _use_raw(true)
-    {
-        _force_update = true;
-
-        return;
-    }
-
-    ~CANObject() = default;
-
-    /*
-        Получить текущее значение параметра.
-    */
-    T GetVal()
-    {
-        return _value;
-    }
-
-    /*
-        Принудительно обновить значение параметра.
-        Обновление произойдёт в следующий тик Processing().
-    */
-    void Update()
-    {
-        _force_update = true;
-
-        return;
-    }
-
-    /*
-        Принудительно отправить значение в CAN.
-        Отправка произойдёт в следующий тик Processing().
-    */
-    void Send()
-    {
-        _force_send = true;
-
-        return;
-    }
-
-    /*
-        Обработка логики объекта.
-    */
-    uint8_t Processing(uint32_t time, packet_t &packet) override
-    {
-        uint8_t flags = 0x00;
-
-        if (_force_update == true || (_update > 0 && time - _last_update >= _update))
+        timer_type_t max_timer_type = CAN_TIMER_TYPE_NONE;
+        event_type_t max_event_type = CAN_EVENT_TYPE_NONE;
+        // uint8_t event_normal_index = UINT8_MAX;
+        for (uint8_t i = 0; i < _item_count; i++)
         {
-            _last_update = time;
-            _force_update = false;
+            if ((_states_of_data_fields[i] & CAN_TIMER_TYPE_MASK) > max_timer_type)
+                max_timer_type = (timer_type_t)(_states_of_data_fields[i] & (uint8_t)CAN_TIMER_TYPE_MASK);
 
-            event_t func_event;
-            error_t func_error = ERROR_NONE;
-            func_event = _updateFunc(_value, func_error);
+            if ((_states_of_data_fields[i] & CAN_EVENT_TYPE_MASK) > max_event_type)
+                max_event_type = (event_type_t)(_states_of_data_fields[i] & (uint8_t)CAN_EVENT_TYPE_MASK);
 
-            switch (func_event)
+            // if (max_event_type == CAN_EVENT_TYPE_NORMAL)
+            //     event_normal_index = i;
+        }
+
+        _ClearCanFrame(can_frame);
+        if (max_event_type == CAN_EVENT_TYPE_NORMAL /* should send immediately, don't need to check time */)
+        {
+            _PrepareEventCanFrame(max_event_type, can_frame);
+            for (uint8_t i = 0; i < _item_count; i++)
             {
-            case EVENT_WARNING:
-            case EVENT_CRITICAL:
-            {
-                packet.length = sizeof(T);
-                packet.type = func_event;
-                *(T *)packet.data = _value;
-
-                flags = 0x03;
-
-                // Костыльный способ запрета отправки по таймеру.
-                _last_send = time;
-
-                break;
-            }
-            case EVENT_ERROR:
-            {
-                packet.length = 2;
-                packet.type = EVENT_ERROR;
-                packet.data[0] = func_error;
-
-                flags = 0x03;
-
-                // Костыльный способ запрета отправки по таймеру.
-                _last_send = time;
-
-                break;
-            }
-            default:
-            {
-                flags = 0x01;
-
-                break;
-            }
+                if ((_states_of_data_fields[i] & CAN_EVENT_TYPE_MASK) == CAN_EVENT_TYPE_NORMAL)
+                    _states_of_data_fields[i] = (_states_of_data_fields[i] & (uint8_t)CAN_TIMER_TYPE_MASK) | CAN_EVENT_TYPE_NONE;
             }
         }
-
-        if (_force_send == true || (_send > 0 && time - _last_send >= _send))
+        else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != UINT16_MAX && time - _last_event_time >= _error_period)
         {
-            _last_send = time;
-            _force_send = false;
-
-            packet.length = sizeof(T);
-            packet.type = EVENT_NORMAL;
-            *(T *)packet.data = _value;
-
-            flags |= 0x02;
+            // TODO: Bug or feature found.
+            // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
+            _PrepareEventCanFrame(max_event_type, can_frame);
+            _last_event_time = time;
         }
-
-        return flags;
-    }
-
-    /*
-        Обработка входящего пакета.
-    */
-    void InputPacket(packet_t &packet) override
-    {
-
-        response_t func_resp;
-        error_t func_error = ERROR_NONE;
-
-        // Если обработчик входящего пакета работает с парсенными значениями.
-        if (_use_raw == false)
+        else if (_timer_period != UINT16_MAX && time - _last_timer_time >= _timer_period)
         {
-            /*
-            T in_value;
-            ParseBytes(packet.data, packet.length, in_value);
-            */
-
-            T *in_value;
-            in_value = (T *)packet.data;
-
-            func_resp = _inputFunc1(*in_value, func_error);
-
-            *(T *)packet.data = *in_value;
+            _PrepareTimerCanFrame(max_timer_type, can_frame);
+            _last_timer_time = time;
         }
-        // Если обработчик входящего пакета работает с сырыми данными.
-        else
-        {
-            func_resp = _inputFunc2(packet, func_error);
-        }
+    };
 
-        switch (func_resp)
-        {
-        case RESP_OK:
-        {
-            packet.type |= 0x40;
+    /// @brief Process incoming CAN frame
+    /// @param can_frame CAN frame for processing
+    virtual void InputCanFrame(can_frame_t &can_frame) override{};
 
-            break;
-        }
-        case RESP_ERROR:
-        {
-            packet.length = 2;
-            packet.type |= 0xC0;
-            packet.data[0] = func_error;
-
-            break;
-        }
-        default:
-        {
-            break;
-        }
-        }
-
-        return;
-    }
-
-    /*
-        Вернуть CAN ID параметра.
-    */
-    can_id_t GetId() override
+    /// @brief Returns CANObject ID
+    /// @return Returns CANObject ID
+    virtual can_object_id_t GetId() override
     {
         return _id;
-    }
+    };
 
-    /*
-        Получить значение параметра в виде массива байт и его длинны.
-    */
-    void GetBytes(uint8_t *bytes, uint8_t &length) override
+    // TODO: don't like it =( State for timer... Ok-event (send immediately)... Error-event (need error section & code)...
+    virtual void SetValue(uint8_t index, void *value,
+                          timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
+                          event_type_t event_type = CAN_EVENT_TYPE_NONE) override
     {
-        memcpy(bytes, &_value, sizeof(T));
-        length = sizeof(T);
+        // Что не нравится:
+        //
+        //  OK-Event - это внешнее событие (например, багажник окрылся). Оно должно отправляться только в момент изменения?
+        //             Тогда мы должны после отправки фрейма сбрасывать event_type, если он равен CAN_EVENT_TYPE_NORMAL...
+        //             При этом если в CANObject несколько полей с изменившимися данными, то сбросить надо для всех и отправить один фрейм.
+        //             А дребезг контактов? Программно фильтруем слишком частое изменение?
+        //
+        //  ERROR-Event - это ошибка значения. Например, за счет ошибки чтения (износа ячейки памяти) мы вместо 1 или 0
+        //                для концевика двери получили какой-то мусор. То есть чтение на пине успешное, а вот ячейка памяти, в которую
+        //                сохранили статус двери, умерла.
+        //
+        //  Предположим, у нас CANObject, в котором 7 байт состояния дверей, багажника, капота...
+        //  Если для двери мы прочитали 200 вместо 1/0, то это событие будет иметь приоритет. С CAN будет отправлено сообщение об ошибке.
+        //  При этом пока ошибка не будет устранена, никакие события открытия дверей отправлять в шину не будут...
+        //
+        if (value == nullptr || index >= _item_count)
+            return;
 
-        return;
-    }
-
-    /*
-        Вставить полученное значение.
-    */
-    void ParseBytes(uint8_t *bytes, uint8_t length, T &value)
-    {
-        memcpy(&value, &bytes, sizeof(T));
-
-        return;
-    }
+        _data_fields[index] = *(T *)value;
+        _states_of_data_fields[index] = timer_type | event_type;
+    };
 
 private:
-    can_id_t _id;     // CAN ID параметра. 0x0000 .. 0x07FF.
-    uint16_t _update; // Интервал автоматического обновления значения.
-    uint16_t _send;   // Интервал автоматической отправки значения в CAN.
+    can_object_id_t _id = 0;
 
-    uint32_t _last_update; // Время последнего обновления данных.
-    uint32_t _last_send;   // Время последней отправки данных в CAN.
+    // local data storage
+    T _data_fields[_item_count] = {0};
+    static_assert(_item_count * sizeof(T) <= 7); // static data size validation (to fit it into the can frame)
 
-    bool _force_update; // Флаг принудительного обновления значения.
-    bool _force_send;   // Флаг принудительной отправки значения в CAN.
+    uint8_t _states_of_data_fields[_item_count] = {0};
 
-    update_t _updateFunc;
-    input1_t _inputFunc1;
-    input2_t _inputFunc2;
+    uint32_t _last_timer_time = 0;
+    uint32_t _last_event_time = 0;
 
-    bool _use_raw;
+    uint16_t _timer_period = UINT16_MAX;
+    uint16_t _error_period = UINT16_MAX;
 
-    T _value;
+    void _ClearCanFrame(can_frame_t &can_frame)
+    {
+        memset(&can_frame, 0, sizeof(can_frame));
+        can_frame.initialized = false;
+    }
+
+    void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame)
+    {
+        // _ClearCanFrame(can_frame);
+
+        switch (event_type)
+        {
+        case CAN_EVENT_TYPE_NORMAL:
+            can_frame.function_id = CAN_FUNC_EVENT_OK;
+            memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
+            can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
+            can_frame.initialized = true;
+            return;
+
+        case CAN_EVENT_TYPE_ERROR:
+            can_frame.function_id = CAN_FUNC_EVENT_ERROR;
+            // TODO: error code here...
+            can_frame.raw_data_length = sizeof(can_frame.function_id); // + sizeof(/*error code & section*/);
+            can_frame.initialized = true;
+            return;
+
+        case CAN_EVENT_TYPE_NONE:
+        case CAN_EVENT_TYPE_MASK:
+        default:
+            break;
+        }
+    }
+
+    void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame)
+    {
+        // _ClearCanFrame(can_frame);
+
+        switch (timer_type)
+        {
+        case CAN_TIMER_TYPE_NORMAL:
+            can_frame.function_id = CAN_FUNC_TIMER_NORMAL;
+            break;
+
+        case CAN_TIMER_TYPE_WARNING:
+            can_frame.function_id = CAN_FUNC_TIMER_WARNING;
+            break;
+
+        case CAN_TIMER_TYPE_CRITICAL:
+            can_frame.function_id = CAN_FUNC_TIMER_CRITICAL;
+            break;
+
+        case CAN_TIMER_TYPE_NONE:
+        case CAN_TIMER_TYPE_MASK:
+        default:
+            return;
+        }
+
+        memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
+        can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
+        can_frame.initialized = true;
+    }
 };
