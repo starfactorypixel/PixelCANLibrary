@@ -12,20 +12,20 @@ class CANObjectInterface
 public:
     virtual ~CANObjectInterface() = default;
 
-    /// @brief
-    /// @param event_handler
+    /// @brief 
+    /// @param event_handler 
     virtual void RegisterFunctionEvent(event_handler_t event_handler) = 0;
-
-    /// @brief
-    /// @param set_handler
+    
+    /// @brief 
+    /// @param set_handler 
     virtual void RegisterFunctionSet(set_handler_t set_handler) = 0;
-
-    /// @brief
-    /// @param timer_handler
+    
+    /// @brief 
+    /// @param timer_handler 
     virtual void RegisterFunctionTimer(timer_handler_t timer_handler) = 0;
-
-    /// @brief
-    /// @param request_handler
+    
+    /// @brief 
+    /// @param request_handler 
     virtual void RegisterFunctionRequest(request_handler_t request_handler) = 0;
 
     /// @brief Performs CANObjects processing
@@ -40,6 +40,15 @@ public:
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
     virtual can_object_id_t GetId() = 0;
+
+    /// @brief 
+    /// @param index 
+    /// @param value 
+    /// @param timer_type 
+    /// @param event_type 
+    virtual void SetValue(uint8_t index, void *value,
+                          timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
+                          event_type_t event_type = CAN_EVENT_TYPE_NONE) = 0;
 };
 
 /******************************************************************************************
@@ -120,14 +129,14 @@ public:
     };
 
     // TODO: don't like it =( State for timer... Ok-event (send immediately)... Error-event (need error section & code)...
-    /// @brief
-    /// @param index
-    /// @param value
-    /// @param timer_type
-    /// @param event_type
-    void SetValue(uint8_t index, T value,
-                  timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
-                  event_type_t event_type = CAN_EVENT_TYPE_NONE)
+    /// @brief 
+    /// @param index 
+    /// @param value 
+    /// @param timer_type 
+    /// @param event_type 
+    virtual void SetValue(uint8_t index, void *value,
+                          timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
+                          event_type_t event_type = CAN_EVENT_TYPE_NONE) override
     {
         // Что не нравится:
         //
@@ -147,7 +156,7 @@ public:
         if (value == nullptr || index >= _item_count)
             return;
 
-        _data_fields[index] = value;
+        _data_fields[index] = *(T *)value;
         _states_of_data_fields[index] = timer_type | event_type;
     };
 
@@ -180,6 +189,7 @@ private:
     void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame)
     {
         // _ClearCanFrame(can_frame);
+
         switch (event_type)
         {
         case CAN_EVENT_TYPE_NORMAL:
