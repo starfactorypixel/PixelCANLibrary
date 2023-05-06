@@ -107,8 +107,6 @@ public:
         if (length == 0)
             return false;
 
-        bool result = false;
-
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
             if (_objects[i]->GetId() != id)
@@ -123,17 +121,16 @@ public:
 
             _SendCanData(*_objects[i], can_frame);
 
-            result = true;
-            break;
+            return true;
         }
 
-        return result;
+        return false;
     }
 
 private:
     // don't do data processing very often
     // _tick_time is minimal delay in ms between the data processing
-    static const uint8_t _tick_time = 5;
+    static const uint8_t _tick_time = 10;
 
     CANObjectInterface *_objects[_max_objects] = {nullptr};
     uint8_t _objects_idx = 0;
