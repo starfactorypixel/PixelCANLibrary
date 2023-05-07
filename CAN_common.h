@@ -119,12 +119,12 @@ const char *get_function_name(can_function_id_t function_id)
         return "unknown";
     }
 }
-#else
+#else  // DEBUG
 const char *get_function_name(can_function_id_t function_id)
 {
     return "";
 }
-#endif
+#endif // DEBUG
 
 using can_send_function_t = void (*)(can_object_id_t id, uint8_t *data, uint8_t length);
 
@@ -182,12 +182,12 @@ const char *get_timer_type_name(timer_type_t timer_type)
         return "timer type: unknown";
     }
 }
-#else
+#else  // DEBUG
 const char *get_timer_type_name(timer_type_t timer_type)
 {
     return "";
 }
-#endif
+#endif // DEBUG
 
 // #define CAN_EVENT_TYPE_MASK 0b11110000
 enum event_type_t : uint8_t
@@ -219,12 +219,12 @@ const char *get_event_type_name(event_type_t event_type)
         return "event type: unknown";
     }
 }
-#else
+#else  // DEBUG
 const char *get_event_type_name(event_type_t event_type)
 {
     return "";
 }
-#endif
+#endif // DEBUG
 
 enum error_section_t : uint8_t
 {
@@ -289,12 +289,12 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
         return "error: section [unknown], code [-]";
     }
 }
-#else
+#else  // DEBUG
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
 {
     return "";
 }
-#endif
+#endif // DEBUG
 
 struct can_error_t
 {
@@ -307,5 +307,48 @@ using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type
 using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
 using request_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
+
+#ifdef DEBUG
+void log_can_frame(can_frame_t &can_frame)
+{
+    LOGwoN("can frame: [");
+    for (uint8_t i = 0; i < can_frame.raw_data_length; i++)
+    {
+        if (i == 0)
+        {
+            LOGstring("0x%02X (%s)%s", can_frame.function_id,
+                      get_function_name(can_frame.function_id),
+                      (i == can_frame.raw_data_length - 1) ? "" : ", ");
+        }
+        else if (can_frame.function_id == CAN_FUNC_EVENT_ERROR && i == 2)
+        {
+            LOGstring("0x%02X (%s)%s", can_frame.raw_data[i],
+                      get_error_code_name_for_section((error_section_t)can_frame.raw_data[1], can_frame.raw_data[2]),
+                      (i == can_frame.raw_data_length - 1) ? "" : ", ");
+        }
+        else
+        {
+            LOGstring("0x%02X%s", can_frame.raw_data[i], (i == can_frame.raw_data_length - 1) ? "" : ", ");
+        }
+    }
+    LOGstring("]\n");
+}
+
+void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
+{
+    can_frame_t can_frame;
+    memcpy(can_frame.raw_data, data, length);
+    LOGwoN("object id = 0x%04X, ", id);
+    log_can_frame(can_frame);
+}
+#else  // DEBUG
+void log_can_frame(can_frame_t &can_frame)
+{
+}
+
+void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
+{
+}
+#endif // DEBUG
 
 #endif // CAN_COMMON_H
