@@ -114,7 +114,7 @@ public:
         _last_tick = time;
 
         can_frame_t can_frame;
-        error_t error;
+        can_error_t error;
         error.function_id = CAN_FUNC_NONE;
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
@@ -142,7 +142,7 @@ public:
         if (can_object == nullptr)
             return false;
 
-        error_t error;
+        can_error_t error;
         error.function_id = CAN_FUNC_NONE;
         can_frame_t can_frame;
         can_frame.raw_data_length = length;
@@ -184,7 +184,7 @@ private:
         _send_func(can_object.GetId(), can_frame.raw_data, can_frame.raw_data_length);
     }
 
-    void _FillErrorCanFrame(can_frame_t &can_frame, error_t error)
+    void _FillErrorCanFrame(can_frame_t &can_frame, can_error_t error)
     {
         if (error.error_section == ERROR_SECTION_NONE)
         {

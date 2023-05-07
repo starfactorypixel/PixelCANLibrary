@@ -34,12 +34,12 @@ public:
     /// @param time Current time
     /// @param can_frame CAN frame for storing the outgoing data
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void Process(uint32_t time, can_frame_t &can_frame, error_t &error) = 0;
+    virtual void Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) = 0;
 
     /// @brief Process incoming CAN frame
     /// @param can_frame CAN frame for processing
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void InputCanFrame(can_frame_t &can_frame, error_t &error) = 0;
+    virtual void InputCanFrame(can_frame_t &can_frame, can_error_t &error) = 0;
 
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
@@ -115,7 +115,7 @@ public:
     /// @param time Current time
     /// @param can_frame OUT: CAN frame for storing the outgoing data
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void Process(uint32_t time, can_frame_t &can_frame, error_t &error) override
+    virtual void Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) override
     {
         timer_type_t max_timer_type = CAN_TIMER_TYPE_NONE;
         event_type_t max_event_type = CAN_EVENT_TYPE_NONE;
@@ -183,7 +183,7 @@ public:
     /// @brief Process incoming CAN frame
     /// @param can_frame CAN frame for processing
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void InputCanFrame(can_frame_t &can_frame, error_t &error) override
+    virtual void InputCanFrame(can_frame_t &can_frame, can_error_t &error) override
     {
         if (!can_frame.initialized)
             return;
@@ -321,7 +321,7 @@ private:
     /// @param event_type Type of the event
     /// @param can_frame CAN frame for filling with data.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame, error_t &error)
+    void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame, can_error_t &error)
     {
         // _ClearCanFrame(can_frame);
 
@@ -340,7 +340,7 @@ private:
             error.error_code = ERROR_CODE_OBJECT_SOMETHING_WRONG;
             /* TODO: custom error code here...
             can_frame.function_id = CAN_FUNC_EVENT_ERROR;
-            can_frame.raw_data_length = sizeof(can_frame.function_id); // + sizeof(error_t);
+            can_frame.raw_data_length = sizeof(can_frame.function_id); // + sizeof(can_error_t);
             can_frame.initialized = true;
             */
             return;
@@ -359,7 +359,7 @@ private:
     /// @param timer_type Type of the timer.
     /// @param can_frame CAN frame for filling with data.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, error_t &error)
+    void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, can_error_t &error)
     {
         // _ClearCanFrame(can_frame);
         switch (timer_type)
@@ -393,7 +393,7 @@ private:
     /// @brief Fills CAN frame with request specific data.
     /// @param can_frame Incoming and outgoing CAN frame.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareRequestCanFrame(can_frame_t &can_frame, error_t &error)
+    void _PrepareRequestCanFrame(can_frame_t &can_frame, can_error_t &error)
     {
         if (can_frame.raw_data_length != 1)
         {

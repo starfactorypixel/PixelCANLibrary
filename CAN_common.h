@@ -296,16 +296,16 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 }
 #endif
 
-struct error_t
+struct can_error_t
 {
     can_function_id_t function_id;
     error_section_t error_section;
     uint8_t error_code;
 };
 
-using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type, error_t &error);
-using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, error_t &error);
-using request_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
-using set_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
+using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type, can_error_t &error);
+using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
+using request_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
+using set_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
 
 #endif // CAN_COMMON_H
