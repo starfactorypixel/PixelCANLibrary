@@ -75,9 +75,18 @@ public:
     CANObject() = delete;
 
     CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED)
-        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms){};
+        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms)
+    {
+        ClearDataFields();
+    };
 
     virtual ~CANObject() = default;
+
+    void ClearDataFields()
+    {
+        memset(_data_fields, 0, _item_count);
+        memset(_states_of_data_fields, 0, _item_count);
+    }
 
     /// @brief Registers an external handler for events. It will be called when event occurs.
     /// @param event_handler Pointer to the event handler.
