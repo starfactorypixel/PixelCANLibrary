@@ -338,6 +338,8 @@ void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
 {
     can_frame_t can_frame;
     memcpy(can_frame.raw_data, data, length);
+    can_frame.raw_data_length = length;
+    can_frame.initialized = true;
     LOGwoN("object id = 0x%04X, ", id);
     log_can_frame(can_frame);
 }
