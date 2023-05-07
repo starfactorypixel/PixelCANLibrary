@@ -45,10 +45,14 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_TIMER_NORMAL = 0x61,
     CAN_FUNC_TIMER_WARNING = 0x62,
     CAN_FUNC_TIMER_CRITICAL = 0x63,
-    CAN_FUNC_SIMPLE_SENDER = 0xC0,
 
     CAN_FUNC_EVENT_OK = 0x65,
     CAN_FUNC_EVENT_ERROR = 0xE6,
+
+    // CAN_FUNC_FIRST_IN = 0x00, // == CAN_FUNC_NONE
+    CAN_FUNC_FIRST_OUT_OK = 0x40,
+    CAN_FUNC_FIRST_OUT_UNUSED = 0x80,
+    CAN_FUNC_FIRST_OUT_ERR = 0xC0,
 };
 
 #ifdef DEBUG
@@ -92,7 +96,9 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_EVENT_ERROR:
         return "event:error";
 
-    case CAN_FUNC_SIMPLE_SENDER:
+    case CAN_FUNC_FIRST_OUT_OK:
+    case CAN_FUNC_FIRST_OUT_UNUSED:
+    case CAN_FUNC_FIRST_OUT_ERR:
     case CAN_FUNC_SEND_RAW_INIT_IN:
     case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
     case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
@@ -232,12 +238,65 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_UNSUPPORTED_TIMER_TYPE = 0x02,
     ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING = 0x03,
     ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION = 0x04,
+    ERROR_CODE_OBJECT_INCORRECT_REQUEST = 0x05,
 
-    ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code 
+    ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
+
+#ifdef DEBUG
+const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
+{
+    switch (error_section)
+    {
+    case ERROR_SECTION_NONE:
+        return "error: section [none], code [-]";
+
+    case ERROR_SECTION_CAN_MANAGER:
+        return "error: section [CANManager], code [-]";
+
+    case ERROR_SECTION_CAN_OBJECT:
+        switch ((error_code_object_t)error_code)
+        {
+        case ERROR_CODE_OBJECT_NONE:
+            return "error: section [CANObject], code [none]";
+
+        case ERROR_CODE_OBJECT_UNSUPPORTED_EVENT_TYPE:
+            return "error: section [CANObject], code [unsupported event type]";
+
+        case ERROR_CODE_OBJECT_UNSUPPORTED_TIMER_TYPE:
+            return "error: section [CANObject], code [unsupported timer type]";
+
+        case ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING:
+            return "error: section [CANObject], code [set function is missing]";
+
+        case ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION:
+            return "error: section [CANObject], code [unsupported function]";
+
+        case ERROR_CODE_OBJECT_INCORRECT_REQUEST:
+            return "error: section [CANObject], code [incorrect request]";
+
+        case ERROR_CODE_OBJECT_SOMETHING_WRONG:
+            return "error: section [CANObject], code [something went wrong]";
+
+        default:
+            return "error: section [CANObject], code [unknown]";
+        }
+        break;
+
+    default:
+        return "error: section [unknown], code [-]";
+    }
+}
+#else
+const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
+{
+    return "";
+}
+#endif
 
 struct error_t
 {
+    can_function_id_t function_id;
     error_section_t error_section;
     uint8_t error_code;
 };
@@ -246,8 +305,5 @@ using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type
 using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, error_t &error);
 using request_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
 using set_handler_t = void (*)(can_frame_t &can_frame, error_t &error);
-
-
-
 
 #endif // CAN_COMMON_H

@@ -391,10 +391,23 @@ private:
     }
 
     /// @brief Fills CAN frame with request specific data.
-    /// @param can_frame CAN frame for filling with data.
+    /// @param can_frame Incoming and outgoing CAN frame.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
     void _PrepareRequestCanFrame(can_frame_t &can_frame, error_t &error)
     {
-        return;
+        if (can_frame.raw_data_length != 1)
+        {
+            can_frame.initialized = false;
+            error.function_id = CAN_FUNC_REQUEST_OUT_ERR;
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_INCORRECT_REQUEST;
+            return;
+        }
+
+        _ClearCanFrame(can_frame);
+        can_frame.initialized = true;
+        can_frame.function_id = CAN_FUNC_REQUEST_OUT_OK;
+        memcpy(can_frame.data, _data_fields, _item_count * sizeof(T));
+        can_frame.raw_data_length = 1 + _item_count * sizeof(T);
     }
 };

@@ -9,8 +9,37 @@
 /******************************************************************************************
  *
  ******************************************************************************************/
+class CANManagerInterface
+{
+public:
+    virtual ~CANManagerInterface() = default;
+
+    /// @brief Registers specified CANObject
+    /// @param can_object CANObject for registration
+    /// @return 'true' if registration was successful, 'false' if not
+    virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
+
+    /// @brief Registers low level function, that sends data via CAN bus
+    /// @param can_send_func Pointer to the function
+    virtual void RegisterSendFunction(can_send_function_t can_send_func) = 0;
+
+    /// @brief Performs CANObjects processing
+    /// @param time Current time
+    virtual void Process(uint32_t time) = 0;
+
+    /// @brief Processes incoming CAN frame (without any queues?)
+    /// @param id CANObject ID from the CAN frame
+    /// @param data Pointer to the data array
+    /// @param length Data length
+    /// @return true if CANObject with ID is registered, false if not
+    virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) = 0;
+};
+
+/******************************************************************************************
+ *
+ ******************************************************************************************/
 template <uint8_t _max_objects = 16>
-class CANManager
+class CANManager : public CANManagerInterface
 {
     static_assert(_max_objects > 0); // 0 objects is not allowed
 public:
@@ -27,7 +56,7 @@ public:
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
-    bool RegisterObject(CANObjectInterface &can_object)
+    virtual bool RegisterObject(CANObjectInterface &can_object) override
     {
         if (_max_objects <= _objects_idx)
             return false;
@@ -68,7 +97,7 @@ public:
 
     /// @brief Registers low level function, that sends data via CAN bus
     /// @param can_send_func Pointer to the function
-    void RegisterSendFunction(can_send_function_t can_send_func)
+    virtual void RegisterSendFunction(can_send_function_t can_send_func) override
     {
         if (can_send_func == nullptr)
             return;
@@ -77,7 +106,7 @@ public:
 
     /// @brief Performs CANObjects processing
     /// @param time Current time
-    void Process(uint32_t time)
+    virtual void Process(uint32_t time) override
     {
         if (time - _last_tick < _tick_time)
             return;
@@ -86,6 +115,7 @@ public:
 
         can_frame_t can_frame;
         error_t error;
+        error.function_id = CAN_FUNC_NONE;
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
             can_frame.initialized = false;
@@ -103,7 +133,7 @@ public:
     /// @param data Pointer to the data array
     /// @param length Data length
     /// @return true if CANObject with ID is registered, false if not
-    bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length)
+    virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) override
     {
         if (length == 0)
             return false;
@@ -112,8 +142,9 @@ public:
         if (can_object == nullptr)
             return false;
 
-        error_t error = {0};
-        can_frame_t can_frame = {0};
+        error_t error;
+        error.function_id = CAN_FUNC_NONE;
+        can_frame_t can_frame;
         can_frame.raw_data_length = length;
         memcpy(&can_frame.raw_data, data, length);
         can_frame.initialized = true;
@@ -162,9 +193,16 @@ private:
         }
 
         can_frame.initialized = true;
-        can_frame.function_id = CAN_FUNC_EVENT_ERROR;
+        if (error.function_id != CAN_FUNC_NONE)
+        {
+            can_frame.function_id = error.function_id;
+        }
+        else
+        {
+            can_frame.function_id = CAN_FUNC_EVENT_ERROR;
+        }
         can_frame.data[0] = error.error_section;
         can_frame.data[1] = error.error_code;
-        can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(error_t);
+        can_frame.raw_data_length = sizeof(can_frame.function_id) + 2;
     }
 };
