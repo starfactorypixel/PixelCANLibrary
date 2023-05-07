@@ -74,7 +74,7 @@ public:
     /// @brief Default constructor is forbidden.
     CANObject() = delete;
 
-    CANObject(can_object_id_t id, uint16_t timer_period_ms = UINT16_MAX, uint16_t error_period_ms = UINT16_MAX)
+    CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED)
         : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms){};
 
     virtual ~CANObject() = default;
@@ -151,7 +151,7 @@ public:
                     _states_of_data_fields[i] = (_states_of_data_fields[i] & (uint8_t)CAN_TIMER_TYPE_MASK) | CAN_EVENT_TYPE_NONE;
             }
         }
-        else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != UINT16_MAX && time - _last_event_time >= _error_period)
+        else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != CAN_ERROR_DISABLED && time - _last_event_time >= _error_period)
         {
             // TODO: A bug or a feature found =)
             // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
@@ -166,7 +166,7 @@ public:
             }
             _last_event_time = time;
         }
-        else if (max_timer_type != CAN_TIMER_TYPE_NONE && _timer_period != UINT16_MAX && time - _last_timer_time >= _timer_period)
+        else if (max_timer_type != CAN_TIMER_TYPE_NONE && _timer_period != CAN_TIMER_DISABLED && time - _last_timer_time >= _timer_period)
         {
             if (_timer_handler != nullptr)
             {
@@ -301,8 +301,8 @@ private:
     uint32_t _last_timer_time = 0;
     uint32_t _last_event_time = 0;
 
-    uint16_t _timer_period = UINT16_MAX;
-    uint16_t _error_period = UINT16_MAX;
+    uint16_t _timer_period = CAN_TIMER_DISABLED;
+    uint16_t _error_period = CAN_ERROR_DISABLED;
 
     event_handler_t _event_handler = nullptr;
     set_handler_t _set_handler = nullptr;

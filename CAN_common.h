@@ -8,6 +8,8 @@
 typedef uint16_t can_object_id_t;
 
 #define CAN_FRAME_MAX_PAYLOAD 7 // excluding the function ID
+#define CAN_TIMER_DISABLED UINT16_MAX
+#define CAN_ERROR_DISABLED UINT16_MAX
 
 // CAN Function IDs
 enum can_function_id_t : uint8_t
