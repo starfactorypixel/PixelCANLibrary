@@ -2,10 +2,6 @@
 #define CAN_COMMON_BLOCK_H
 
 #include <stdint.h>
-#include "CAN_common.h"
-
-class CANManager;
-class CANObject;
 
 #ifdef __cplusplus
 extern "C"
