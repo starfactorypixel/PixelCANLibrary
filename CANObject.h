@@ -74,7 +74,7 @@ public:
     /// @brief Default constructor is forbidden.
     CANObject() = delete;
 
-    CANObject(can_object_id_t id, uint16_t timer_period_ms, uint16_t error_period_ms)
+    CANObject(can_object_id_t id, uint16_t timer_period_ms = UINT16_MAX, uint16_t error_period_ms = UINT16_MAX)
         : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms){};
 
     virtual ~CANObject() = default;
