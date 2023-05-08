@@ -57,98 +57,33 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_FIRST_OUT_ERR = 0xC0,
 };
 
-#ifdef DEBUG
-const char *get_function_name(can_function_id_t function_id)
-{
-    switch (function_id)
-    {
-    case CAN_FUNC_NONE:
-        return "none";
-
-    case CAN_FUNC_SET_IN:
-        return "set:in";
-
-    case CAN_FUNC_SET_OUT_OK:
-        return "set:out-ok";
-
-    case CAN_FUNC_SET_OUT_ERR:
-        return "set:out-error";
-
-    case CAN_FUNC_REQUEST_IN:
-        return "request:in";
-
-    case CAN_FUNC_REQUEST_OUT_OK:
-        return "request:out-ok";
-
-    case CAN_FUNC_REQUEST_OUT_ERR:
-        return "request:out-error";
-
-    case CAN_FUNC_TIMER_NORMAL:
-        return "timer:normal";
-
-    case CAN_FUNC_TIMER_WARNING:
-        return "timer:warning";
-
-    case CAN_FUNC_TIMER_CRITICAL:
-        return "timer:critical";
-
-    case CAN_FUNC_EVENT_OK:
-        return "event:normal";
-
-    case CAN_FUNC_EVENT_ERROR:
-        return "event:error";
-
-    case CAN_FUNC_FIRST_OUT_OK:
-    case CAN_FUNC_FIRST_OUT_UNUSED:
-    case CAN_FUNC_FIRST_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_INIT_IN:
-    case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
-    case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_FINISH_IN:
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
-    default:
-        return "unknown";
-    }
-}
-#else  // DEBUG
-const char *get_function_name(can_function_id_t function_id)
-{
-    return "";
-}
-#endif // DEBUG
-
 using can_send_function_t = void (*)(can_object_id_t id, uint8_t *data, uint8_t length);
 
 // CANFrame data structure
 // It can be changed to class later (in case we need it)
-struct __attribute__((__packed__)) can_frame_t
+struct can_frame_t
 {
+    can_object_id_t object_id = 0x0000;
     union
     {
-        uint8_t raw_data[CAN_FRAME_MAX_PAYLOAD + 1];
-        struct __attribute__((__packed__))
+        uint8_t raw_data[CAN_FRAME_MAX_PAYLOAD + 1] = {0};
+        struct
         {
             can_function_id_t function_id;
             uint8_t data[CAN_FRAME_MAX_PAYLOAD];
         };
     };
-    uint8_t raw_data_length;
-    bool initialized;
+    uint8_t raw_data_length = 0;
+    bool initialized = false;
 };
 // can_function_id_t must have a size of 1 byte
 // otherwise we need to update can_frame_t structure
 static_assert(sizeof(can_function_id_t) == 1);
 
-// #define CAN_TIMER_TYPE_MASK 0b00001111
+/// @brief Clears all attributes of CAN frame
+/// @param can_frame CAN frame to clear
+void clear_can_frame_struct(can_frame_t &can_frame);
+
 enum timer_type_t : uint8_t
 {
     CAN_TIMER_TYPE_NONE = 0b00000000,
@@ -159,37 +94,6 @@ enum timer_type_t : uint8_t
     CAN_TIMER_TYPE_MASK = 0b00001111,
 };
 
-#ifdef DEBUG
-const char *get_timer_type_name(timer_type_t timer_type)
-{
-    switch (timer_type)
-    {
-    case CAN_TIMER_TYPE_NONE:
-        return "timer type: none";
-
-    case CAN_TIMER_TYPE_NORMAL:
-        return "timer type: normal";
-
-    case CAN_TIMER_TYPE_WARNING:
-        return "timer type: warning";
-
-    case CAN_TIMER_TYPE_CRITICAL:
-        return "timer type: critical";
-
-    case CAN_TIMER_TYPE_MASK:
-        return "timer type: mask";
-    default:
-        return "timer type: unknown";
-    }
-}
-#else  // DEBUG
-const char *get_timer_type_name(timer_type_t timer_type)
-{
-    return "";
-}
-#endif // DEBUG
-
-// #define CAN_EVENT_TYPE_MASK 0b11110000
 enum event_type_t : uint8_t
 {
     CAN_EVENT_TYPE_NONE = 0b00000000,
@@ -198,33 +102,6 @@ enum event_type_t : uint8_t
 
     CAN_EVENT_TYPE_MASK = 0b11110000,
 };
-
-#ifdef DEBUG
-const char *get_event_type_name(event_type_t event_type)
-{
-    switch (event_type)
-    {
-    case CAN_EVENT_TYPE_NONE:
-        return "event type: none";
-
-    case CAN_EVENT_TYPE_NORMAL:
-        return "event type: normal";
-
-    case CAN_EVENT_TYPE_ERROR:
-        return "event type: error";
-
-    case CAN_EVENT_TYPE_MASK:
-        return "event type: mask";
-    default:
-        return "event type: unknown";
-    }
-}
-#else  // DEBUG
-const char *get_event_type_name(event_type_t event_type)
-{
-    return "";
-}
-#endif // DEBUG
 
 enum error_section_t : uint8_t
 {
@@ -245,112 +122,33 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
 
-#ifdef DEBUG
-const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
+struct can_error_t
 {
-    switch (error_section)
-    {
-    case ERROR_SECTION_NONE:
-        return "error: section [none], code [-]";
-
-    case ERROR_SECTION_CAN_MANAGER:
-        return "error: section [CANManager], code [-]";
-
-    case ERROR_SECTION_CAN_OBJECT:
-        switch ((error_code_object_t)error_code)
-        {
-        case ERROR_CODE_OBJECT_NONE:
-            return "error: section [CANObject], code [none]";
-
-        case ERROR_CODE_OBJECT_UNSUPPORTED_EVENT_TYPE:
-            return "error: section [CANObject], code [unsupported event type]";
-
-        case ERROR_CODE_OBJECT_UNSUPPORTED_TIMER_TYPE:
-            return "error: section [CANObject], code [unsupported timer type]";
-
-        case ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING:
-            return "error: section [CANObject], code [set function is missing]";
-
-        case ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION:
-            return "error: section [CANObject], code [unsupported function]";
-
-        case ERROR_CODE_OBJECT_INCORRECT_REQUEST:
-            return "error: section [CANObject], code [incorrect request]";
-
-        case ERROR_CODE_OBJECT_SOMETHING_WRONG:
-            return "error: section [CANObject], code [something went wrong]";
-
-        default:
-            return "error: section [CANObject], code [unknown]";
-        }
-        break;
-
-    default:
-        return "error: section [unknown], code [-]";
-    }
-}
-#else  // DEBUG
-const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
-{
-    return "";
-}
-#endif // DEBUG
-
-struct __attribute__((__packed__)) can_error_t
-{
-    can_function_id_t function_id;
-    error_section_t error_section;
-    uint8_t error_code;
+    can_function_id_t function_id = CAN_FUNC_NONE;
+    error_section_t error_section = ERROR_SECTION_NONE;
+    uint8_t error_code = 0;
 };
+
+/// @brief Clears all attributes of CAN error structure
+/// @param error CAN error to clear
+void clear_can_error_struct(can_error_t &error);
 
 using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type, can_error_t &error);
 using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
 using request_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
 
-#ifdef DEBUG
-void log_can_frame(can_frame_t &can_frame)
-{
-    LOGwoN("can frame: [");
-    for (uint8_t i = 0; i < can_frame.raw_data_length; i++)
-    {
-        if (i == 0)
-        {
-            LOGstring("0x%02X (%s)%s", can_frame.function_id,
-                      get_function_name(can_frame.function_id),
-                      (i == can_frame.raw_data_length - 1) ? "" : ", ");
-        }
-        else if (can_frame.function_id == CAN_FUNC_EVENT_ERROR && i == 2)
-        {
-            LOGstring("0x%02X (%s)%s", can_frame.raw_data[i],
-                      get_error_code_name_for_section((error_section_t)can_frame.raw_data[1], can_frame.raw_data[2]),
-                      (i == can_frame.raw_data_length - 1) ? "" : ", ");
-        }
-        else
-        {
-            LOGstring("0x%02X%s", can_frame.raw_data[i], (i == can_frame.raw_data_length - 1) ? "" : ", ");
-        }
-    }
-    LOGstring("]\n");
-}
-
-void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
-{
-    can_frame_t can_frame;
-    memcpy(can_frame.raw_data, data, length);
-    can_frame.raw_data_length = length;
-    can_frame.initialized = true;
-    LOGwoN("object id = 0x%04X, ", id);
-    log_can_frame(can_frame);
-}
-#else  // DEBUG
-void log_can_frame(can_frame_t &can_frame)
-{
-}
-
-void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
-{
-}
-#endif // DEBUG
+/*************************************************************************************************
+ *
+ * Logger related functions.
+ * All of them are disabled without DEBUG definition.
+ *
+ *************************************************************************************************/
+const char *get_function_name(can_function_id_t function_id);
+const char *get_timer_type_name(timer_type_t timer_type);
+const char *get_event_type_name(event_type_t event_type);
+const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code);
+void log_can_frame(can_frame_t &can_frame);
+void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length);
 
 #endif // CAN_COMMON_H

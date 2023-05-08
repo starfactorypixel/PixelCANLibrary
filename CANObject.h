@@ -141,7 +141,7 @@ public:
             //     event_normal_index = i;
         }
 
-        _ClearCanFrame(can_frame);
+        clear_can_frame_struct(can_frame);
         if (max_event_type == CAN_EVENT_TYPE_NORMAL /* should send immediately, don't need to check time */)
         {
             if (_event_handler != nullptr)
@@ -210,7 +210,7 @@ public:
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING;
             }
-            return;
+            break;
 
         case CAN_FUNC_REQUEST_IN:
             if (_request_handler != nullptr)
@@ -221,14 +221,16 @@ public:
             {
                 _PrepareRequestCanFrame(can_frame, error);
             }
-            return;
+            break;
 
         default:
             can_frame.initialized = false;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION;
-            return;
+            break;
         }
+        // restoring ID in case an external handler has overwritten it
+        can_frame.object_id = GetId();
     };
 
     /// @brief Returns CANObject ID
@@ -318,22 +320,12 @@ private:
     timer_handler_t _timer_handler = nullptr;
     request_handler_t _request_handler = nullptr;
 
-    /// @brief Clears the CAN frame structure and assigns it the value "not initialized"
-    /// @param can_frame CAN frame to clear
-    void _ClearCanFrame(can_frame_t &can_frame)
-    {
-        memset(&can_frame, 0, sizeof(can_frame));
-        can_frame.initialized = false;
-    }
-
     /// @brief Fills CAN frame with event specific data
     /// @param event_type Type of the event
     /// @param can_frame CAN frame for filling with data.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
     void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame, can_error_t &error)
     {
-        // _ClearCanFrame(can_frame);
-
         switch (event_type)
         {
         case CAN_EVENT_TYPE_NORMAL:
@@ -370,7 +362,6 @@ private:
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
     void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, can_error_t &error)
     {
-        // _ClearCanFrame(can_frame);
         switch (timer_type)
         {
         case CAN_TIMER_TYPE_NORMAL:
@@ -413,7 +404,7 @@ private:
             return;
         }
 
-        _ClearCanFrame(can_frame);
+        clear_can_frame_struct(can_frame);
         can_frame.initialized = true;
         can_frame.function_id = CAN_FUNC_REQUEST_OUT_OK;
         memcpy(can_frame.data, _data_fields, _item_count * sizeof(T));
