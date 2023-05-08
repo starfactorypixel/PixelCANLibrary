@@ -135,7 +135,7 @@ struct __attribute__((__packed__)) can_frame_t
     union
     {
         uint8_t raw_data[CAN_FRAME_MAX_PAYLOAD + 1];
-        struct
+        struct __attribute__((__packed__))
         {
             can_function_id_t function_id;
             uint8_t data[CAN_FRAME_MAX_PAYLOAD];
@@ -296,7 +296,7 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 }
 #endif // DEBUG
 
-struct can_error_t
+struct __attribute__((__packed__)) can_error_t
 {
     can_function_id_t function_id;
     error_section_t error_section;
