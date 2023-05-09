@@ -12,23 +12,42 @@ class CANObjectInterface
 public:
     virtual ~CANObjectInterface() = default;
 
+    /// @brief Sets the value of timers period.
+    /// @param period_ms Timers period in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& SetTimerPeriod(uint16_t period_ms) = 0;
+
     /// @brief Registers an external handler for events. It will be called when event occurs.
     /// @param event_handler Pointer to the event handler.
     /// @param error_delay_ms Delay for the error evends in milliseconds.
-    virtual void RegisterFunctionEvent(event_handler_t event_handler, uint16_t error_delay_ms) = 0;
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionEvent(event_handler_t event_handler, uint16_t error_delay_ms) = 0;
+
+    /// @brief Registers an external handler for events. It will be called when event occurs.
+    /// @param event_handler Pointer to the event handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionEvent(event_handler_t event_handler) = 0;
+
+    /// @brief Sets the value of error events resending delay.
+    /// @param delay_ms Delay for the error evends in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& SetErrorEventDelay(uint16_t delay_ms) = 0;
 
     /// @brief Registers an external handler for set commands. It will be called when set command comes.
     /// @param set_handler Pointer to the set command handler.
-    virtual void RegisterFunctionSet(set_handler_t set_handler) = 0;
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionSet(set_handler_t set_handler) = 0;
 
     /// @brief Registers an external handler for timers. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
     /// @param period_ms Timers period in milliseconds.
-    virtual void RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) = 0;
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) = 0;
 
     /// @brief Registers an external handler for request commands. It will be called when request command comes.
     /// @param request_handler Pointer to the request command handler.
-    virtual void RegisterFunctionRequest(request_handler_t request_handler) = 0;
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionRequest(request_handler_t request_handler) = 0;
 
     /// @brief Performs CANObjects processing
     /// @param time Current time
@@ -44,14 +63,6 @@ public:
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
     virtual can_object_id_t GetId() = 0;
-
-    /// @brief Sets the value of timers period.
-    /// @param period_ms Timers period in milliseconds.
-    virtual void SetTimerPeriod(uint16_t period_ms) = 0;
-
-    /// @brief Sets the value of error events resending delay.
-    /// @param delay_ms Delay for the error evends in milliseconds.
-    virtual void SetErrorEventDelay(uint16_t delay_ms) = 0;
 
     /// @brief Universal setter for CANObject's data fields
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
@@ -88,36 +99,79 @@ public:
         memset(_states_of_data_fields, 0, _item_count);
     }
 
+    /// @brief Sets the value of timers period.
+    /// @param period_ms Timers period in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& SetTimerPeriod(uint16_t period_ms) override
+    {
+        _timer_period = period_ms;
+
+        return *this;
+    };
+
     /// @brief Registers an external handler for events. It will be called when event occurs.
     /// @param event_handler Pointer to the event handler.
     /// @param error_delay_ms Delay for the error evends in milliseconds.
-    virtual void RegisterFunctionEvent(event_handler_t event_handler, uint16_t error_delay_ms) override
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionEvent(event_handler_t event_handler, uint16_t error_delay_ms) override
+    {
+        RegisterFunctionEvent(event_handler);
+        SetErrorEventDelay(error_delay_ms);
+
+        return *this;
+    };
+
+    /// @brief Registers an external handler for events. It will be called when event occurs.
+    /// @param event_handler Pointer to the event handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionEvent(event_handler_t event_handler) override
     {
         _event_handler = event_handler;
-        SetErrorEventDelay(error_delay_ms);
+
+        return *this;
+    };
+
+
+    /// @brief Sets the value of error events resending delay.
+    /// @param delay_ms Delay for the error evends in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& SetErrorEventDelay(uint16_t delay_ms) override
+    {
+        _error_period = delay_ms;
+
+        return *this;
     };
 
     /// @brief Registers an external handler for set commands. It will be called when set command comes.
     /// @param set_handler Pointer to the set command handler.
-    virtual void RegisterFunctionSet(set_handler_t set_handler) override
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionSet(set_handler_t set_handler) override
     {
         _set_handler = set_handler;
+
+        return *this;
     };
 
     /// @brief Registers an external handler for timers. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
     /// @param period_ms Timers period in milliseconds.
-    virtual void RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) override
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) override
     {
         _timer_handler = timer_handler;
         SetTimerPeriod(period_ms);
+
+        return *this;
     };
 
     /// @brief Registers an external handler for request commands. It will be called when request command comes.
     /// @param request_handler Pointer to the request command handler.
-    virtual void RegisterFunctionRequest(request_handler_t request_handler) override
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface& RegisterFunctionRequest(request_handler_t request_handler) override
     {
         _request_handler = request_handler;
+
+        return *this;
     };
 
     /// @brief Performs processing of CANObjects
@@ -240,20 +294,6 @@ public:
         return _id;
     };
 
-    /// @brief Sets the value of timers period.
-    /// @param period_ms Timers period in milliseconds.
-    virtual void SetTimerPeriod(uint16_t period_ms) override
-    {
-        _timer_period = period_ms;
-    };
-
-    /// @brief Sets the value of error events resending delay.
-    /// @param delay_ms Delay for the error evends in milliseconds.
-    virtual void SetErrorEventDelay(uint16_t delay_ms) override
-    {
-        _error_period = delay_ms;
-    };
-
     // TODO: don't like it =( State for timer... Ok-event (send immediately)... Error-event (need error section & code)...
     /// @brief Universal setter for CANObject's data fields
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
@@ -264,7 +304,7 @@ public:
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) override
     {
-        // Что не нравится:
+        // TODO: Что не нравится:
         //
         //  OK-Event - это внешнее событие (например, багажник окрылся). Оно должно отправляться только в момент изменения?
         //             Тогда мы должны после отправки фрейма сбрасывать event_type, если он равен CAN_EVENT_TYPE_NORMAL...
