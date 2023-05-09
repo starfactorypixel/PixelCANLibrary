@@ -49,8 +49,9 @@ public:
     /// @brief Creates CANManager and specifies external function, which sends CAN frames
     /// @param can_send_func Pointer to an external CAN frames sending handler
     CANManager(can_send_function_t can_send_func)
+        : _send_func(can_send_func)
     {
-        RegisterSendFunction(can_send_func);
+        // RegisterSendFunction(can_send_func);
     };
 
     /// @brief Registers specified CANObject
@@ -108,6 +109,7 @@ public:
     {
         if (can_send_func == nullptr)
             return;
+
         _send_func = can_send_func;
     }
 
@@ -140,11 +142,12 @@ public:
             _frame_buffer_index = 0;
         }
 
+        clear_can_error_struct(_tx_error);
+        clear_can_frame_struct(_tx_can_frame);
+
         // Process automatic functions of CANObjects
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
-            clear_can_error_struct(_tx_error);
-            clear_can_frame_struct(_tx_can_frame);
             _objects[i]->Process(time, _tx_can_frame, _tx_error);
             if (!_tx_can_frame.initialized && _tx_error.error_section != ERROR_SECTION_NONE)
             {
@@ -210,6 +213,9 @@ private:
             return;
 
         _send_func(can_frame.object_id, can_frame.raw_data, can_frame.raw_data_length);
+
+        clear_can_error_struct(_tx_error);
+        clear_can_frame_struct(_tx_can_frame);
     }
 
     void _FillErrorCanFrame(can_frame_t &can_frame, can_error_t error)
