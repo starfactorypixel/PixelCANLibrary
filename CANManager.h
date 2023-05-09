@@ -153,7 +153,10 @@ public:
             {
                 _FillErrorCanFrame(_tx_can_frame, _tx_error);
             }
+
+            // restoring ID (if it was overwritten by the handler)
             _tx_can_frame.object_id = _objects[i]->GetId();
+            
             _SendCanData(_tx_can_frame);
         }
     }
