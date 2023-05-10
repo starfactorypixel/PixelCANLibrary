@@ -118,6 +118,7 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING = 0x03,
     ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION = 0x04,
     ERROR_CODE_OBJECT_INCORRECT_REQUEST = 0x05,
+    ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW = 0x06,
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };

@@ -337,6 +337,11 @@ public:
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING;
+                error.function_id = CAN_FUNC_SET_OUT_ERR;
+            }
+            if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
+            {
+                error.function_id = CAN_FUNC_SET_OUT_ERR;
             }
             break;
 
@@ -349,16 +354,29 @@ public:
             {
                 _PrepareRequestCanFrame(can_frame, error);
             }
+            if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
+            {
+                error.function_id = CAN_FUNC_REQUEST_OUT_ERR;
+            }
             break;
 
         default:
             can_frame.initialized = false;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION;
+            error.function_id = CAN_FUNC_EVENT_ERROR;
             break;
         }
         // restoring ID in case an external handler has overwritten it
         can_frame.object_id = GetId();
+
+        if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
+        {
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW;
+            if (error.function_id == CAN_FUNC_NONE)
+                error.function_id = CAN_FUNC_EVENT_ERROR;
+        }
     };
 
     /// @brief Returns CANObject ID

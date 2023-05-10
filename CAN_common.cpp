@@ -182,6 +182,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_INCORRECT_REQUEST:
             return "error: section [CANObject], code [incorrect request]";
+        
+        case ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW:
+            return "error: section [CANObject], code [incorrect function workflow]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";
