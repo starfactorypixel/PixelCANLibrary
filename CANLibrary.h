@@ -7,7 +7,7 @@
 #include "pix_utils.h"
 
 #include "CAN_common.h"
-#include "CAN_common_block.h"
 #include "CANManager.h"
+#include "CAN_common_block.h"
 
 #endif // CANLIBRARY_H
