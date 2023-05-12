@@ -480,7 +480,7 @@ public:
     /// @brief The variation of GetValue() method, which returns typed value.
     /// @param index Index of data field to get value from.
     /// @return The value of the specified data field. If the index is out of range, zero value will be returned.
-    T GetValue(uint8_t index)
+    T GetTypedValue(uint8_t index)
     {
         if (index >= _item_count)
             return (T)0;
