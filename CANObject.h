@@ -109,6 +109,11 @@ public:
     virtual void SetValue(uint8_t index, void *value,
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) = 0;
+
+    /// @brief Universal getter for CANObject's data fields
+    /// @param index Index of data field to get value from. If the index is out of range, nullpointer will be returned.
+    /// @return Pointer to the data field value. If the index is out of range, nullpointer will be returned.
+    virtual void *GetValue(uint8_t index) = 0;
 };
 
 /******************************************************************************************
@@ -460,6 +465,28 @@ public:
         _data_fields[index] = value;
         _states_of_data_fields[index] = timer_type | event_type;
     };
+
+    /// @brief Universal getter for CANObject's data fields
+    /// @param index Index of data field to get value from. If the index is out of range, nullpointer will be returned.
+    /// @return Pointer to the data field value. If the index is out of range, nullpointer will be returned.
+    virtual void *GetValue(uint8_t index) override
+    {
+        if (index >= _item_count)
+            return nullptr;
+        
+        return (void *)&_data_fields[index];
+    };
+
+    /// @brief The variation of GetValue() method, which returns typed value.
+    /// @param index Index of data field to get value from.
+    /// @return The value of the specified data field. If the index is out of range, zero value will be returned.
+    T GetValue(uint8_t index)
+    {
+        if (index >= _item_count)
+            return (T)0;
+
+        return _data_fields[index];
+    }
 
 private:
     can_object_id_t _id = 0;
