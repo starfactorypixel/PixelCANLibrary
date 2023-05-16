@@ -49,10 +49,7 @@ public:
     /// @brief Creates CANManager and specifies external function, which sends CAN frames
     /// @param can_send_func Pointer to an external CAN frames sending handler
     CANManager(can_send_function_t can_send_func)
-        : _send_func(can_send_func)
-    {
-        // RegisterSendFunction(can_send_func);
-    };
+        : _send_func(can_send_func){};
 
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
@@ -129,7 +126,11 @@ public:
             for (uint8_t i = 0; i < _frame_buffer_index; i++)
             {
                 can_object = GetCanObject(_can_frame_buffer[i].object_id);
-                can_object->InputCanFrame(_can_frame_buffer[i], _tx_error);
+                if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], _tx_error))
+                {
+                    _can_frame_buffer[i].initialized = false;
+                    continue;
+                }
 
                 if (!_can_frame_buffer[i].initialized && _tx_error.error_section != ERROR_SECTION_NONE)
                 {
@@ -148,7 +149,9 @@ public:
         // Process automatic functions of CANObjects
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
-            _objects[i]->Process(time, _tx_can_frame, _tx_error);
+            if (CAN_RESULT_IGNORE == _objects[i]->Process(time, _tx_can_frame, _tx_error))
+                continue;
+
             if (!_tx_can_frame.initialized && _tx_error.error_section != ERROR_SECTION_NONE)
             {
                 _FillErrorCanFrame(_tx_can_frame, _tx_error);
@@ -156,7 +159,7 @@ public:
 
             // restoring ID (if it was overwritten by the handler)
             _tx_can_frame.object_id = _objects[i]->GetId();
-            
+
             _SendCanData(_tx_can_frame);
         }
     }

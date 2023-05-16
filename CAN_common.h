@@ -134,10 +134,17 @@ struct can_error_t
 /// @param error CAN error to clear
 void clear_can_error_struct(can_error_t &error);
 
-using event_handler_t = void (*)(can_frame_t &can_frame, event_type_t event_type, can_error_t &error);
-using timer_handler_t = void (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
-using request_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
-using set_handler_t = void (*)(can_frame_t &can_frame, can_error_t &error);
+enum can_result_t : uint8_t
+{
+    CAN_RESULT_IGNORE = 0x00,
+    CAN_RESULT_CAN_FRAME = 0x01,
+    CAN_RESULT_ERROR = 0x02,
+};
+
+using event_handler_t = can_result_t (*)(can_frame_t &can_frame, event_type_t event_type, can_error_t &error);
+using timer_handler_t = can_result_t (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
+using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
+using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 
 /*************************************************************************************************
  *

@@ -74,12 +74,14 @@ public:
     /// @param time Current time
     /// @param can_frame CAN frame for storing the outgoing data
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) = 0;
+    /// @return The result of CANObject processing (should we send any CAN frames or not)
+    virtual can_result_t Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) = 0;
 
     /// @brief Process incoming CAN frame
     /// @param can_frame CAN frame for processing
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void InputCanFrame(can_frame_t &can_frame, can_error_t &error) = 0;
+    /// @return The result of incoming can frame processing (should we send any CAN frames or not)
+    virtual can_result_t InputCanFrame(can_frame_t &can_frame, can_error_t &error) = 0;
 
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
@@ -257,11 +259,11 @@ public:
     /// @param time Current time
     /// @param can_frame OUT: CAN frame for storing the outgoing data
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) override
+    /// @return The result of CANObject processing (should we send any CAN frames or not)
+    virtual can_result_t Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) override
     {
         timer_type_t max_timer_type = CAN_TIMER_TYPE_NONE;
         event_type_t max_event_type = CAN_EVENT_TYPE_NONE;
-        // uint8_t event_normal_index = UINT8_MAX;
         for (uint8_t i = 0; i < _item_count; i++)
         {
             if ((_states_of_data_fields[i] & CAN_TIMER_TYPE_MASK) > max_timer_type)
@@ -269,21 +271,21 @@ public:
 
             if ((_states_of_data_fields[i] & CAN_EVENT_TYPE_MASK) > max_event_type)
                 max_event_type = (event_type_t)(_states_of_data_fields[i] & (uint8_t)CAN_EVENT_TYPE_MASK);
-
-            // if (max_event_type == CAN_EVENT_TYPE_NORMAL)
-            //     event_normal_index = i;
         }
 
+        can_result_t handler_result = CAN_RESULT_ERROR;
+
         clear_can_frame_struct(can_frame);
-        if (max_event_type == CAN_EVENT_TYPE_NORMAL /* should send immediately, don't need to check time */)
+        if (max_event_type == CAN_EVENT_TYPE_NORMAL
         {
+            // CAN_EVENT_TYPE_NORMAL should be sent immediately, we don't need to check the time
             if (_event_handler != nullptr)
             {
-                _event_handler(can_frame, max_event_type, error);
+                handler_result = _event_handler(can_frame, max_event_type, error);
             }
             else
             {
-                _PrepareEventCanFrame(max_event_type, can_frame, error);
+                handler_result = _PrepareEventCanFrame(max_event_type, can_frame, error);
             }
 
             // we need to flush the NORMAL event state of all data fields
@@ -300,11 +302,11 @@ public:
 
             if (_event_handler != nullptr)
             {
-                _event_handler(can_frame, max_event_type, error);
+                handler_result = _event_handler(can_frame, max_event_type, error);
             }
             else
             {
-                _PrepareEventCanFrame(max_event_type, can_frame, error);
+                handler_result = _PrepareEventCanFrame(max_event_type, can_frame, error);
             }
             _last_event_time = time;
         }
@@ -312,33 +314,39 @@ public:
         {
             if (_timer_handler != nullptr)
             {
-                _timer_handler(can_frame, max_timer_type, error);
+                handler_result = _timer_handler(can_frame, max_timer_type, error);
             }
             else
             {
-                _PrepareTimerCanFrame(max_timer_type, can_frame, error);
+                handler_result = _PrepareTimerCanFrame(max_timer_type, can_frame, error);
             }
             _last_timer_time = time;
         }
+
+        return handler_result;
     };
 
     /// @brief Process incoming CAN frame
     /// @param can_frame CAN frame for processing
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    virtual void InputCanFrame(can_frame_t &can_frame, can_error_t &error) override
+    /// @return The result of incoming can frame processing (should we send any CAN frames or not)
+    virtual can_result_t InputCanFrame(can_frame_t &can_frame, can_error_t &error) override
     {
         if (!can_frame.initialized)
-            return;
+            return CAN_RESULT_ERROR;
+
+        can_result_t handler_result = CAN_RESULT_ERROR;
 
         switch (can_frame.function_id)
         {
         case CAN_FUNC_SET_IN:
             if (_set_handler != nullptr)
             {
-                _set_handler(can_frame, error);
+                handler_result = _set_handler(can_frame, error);
             }
             else
             {
+                handler_result = CAN_RESULT_ERROR;
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING;
@@ -353,11 +361,11 @@ public:
         case CAN_FUNC_REQUEST_IN:
             if (_request_handler != nullptr)
             {
-                _request_handler(can_frame, error);
+                handler_result = _request_handler(can_frame, error);
             }
             else
             {
-                _PrepareRequestCanFrame(can_frame, error);
+                handler_result = _PrepareRequestCanFrame(can_frame, error);
             }
             if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
             {
@@ -366,6 +374,7 @@ public:
             break;
 
         default:
+            handler_result = CAN_RESULT_ERROR;
             can_frame.initialized = false;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_UNSUPPORTED_FUNCTION;
@@ -377,11 +386,14 @@ public:
 
         if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
         {
+            handler_result = CAN_RESULT_ERROR;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW;
             if (error.function_id == CAN_FUNC_NONE)
                 error.function_id = CAN_FUNC_EVENT_ERROR;
         }
+
+        return handler_result;
     };
 
     /// @brief Returns CANObject ID
@@ -419,7 +431,6 @@ public:
         return sizeof(T);
     };
 
-    // TODO: don't like it =( State for timer... Ok-event (send immediately)... Error-event (need error section & code)...
     /// @brief Universal setter for CANObject's data fields
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
     /// @param value Pointer to the variable with data. The size of data depends of CANObject.
@@ -429,21 +440,6 @@ public:
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) override
     {
-        // TODO: Что не нравится:
-        //
-        //  OK-Event - это внешнее событие (например, багажник окрылся). Оно должно отправляться только в момент изменения?
-        //             Тогда мы должны после отправки фрейма сбрасывать event_type, если он равен CAN_EVENT_TYPE_NORMAL...
-        //             При этом если в CANObject несколько полей с изменившимися данными, то сбросить надо для всех и отправить один фрейм.
-        //             А дребезг контактов? Программно фильтруем слишком частое изменение?
-        //
-        //  ERROR-Event - это ошибка значения. Например, за счет ошибки чтения (износа ячейки памяти) мы вместо 1 или 0
-        //                для концевика двери получили какой-то мусор. То есть чтение на пине успешное, а вот ячейка памяти, в которую
-        //                сохранили статус двери, умерла.
-        //
-        //  Предположим, у нас CANObject, в котором 7 байт состояния дверей, багажника, капота...
-        //  Если для двери мы прочитали 200 вместо 1/0, то это событие будет иметь приоритет. С CAN будет отправлено сообщение об ошибке.
-        //  При этом пока ошибка не будет устранена, никакие события открытия дверей отправлять в шину не будут...
-        //
         if (value == nullptr)
             return;
 
@@ -473,7 +469,7 @@ public:
     {
         if (index >= _item_count)
             return nullptr;
-        
+
         return (void *)&_data_fields[index];
     };
 
@@ -511,7 +507,8 @@ private:
     /// @param event_type Type of the event
     /// @param can_frame CAN frame for filling with data.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame, can_error_t &error)
+    /// @return The result of operation (should we send any CAN/Error frames or not)
+    can_result_t _PrepareEventCanFrame(event_type_t event_type, can_frame_t &can_frame, can_error_t &error)
     {
         switch (event_type)
         {
@@ -520,18 +517,18 @@ private:
             memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
             can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
             can_frame.initialized = true;
-            return;
+            return CAN_RESULT_CAN_FRAME;
 
         case CAN_EVENT_TYPE_ERROR:
             can_frame.initialized = false;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_SOMETHING_WRONG;
-            /* TODO: custom error code here...
+            /* TODO: custom error code here like that:
             can_frame.function_id = CAN_FUNC_EVENT_ERROR;
             can_frame.raw_data_length = sizeof(can_frame.function_id); // + sizeof(can_error_t);
             can_frame.initialized = true;
             */
-            return;
+            return CAN_RESULT_ERROR;
 
         case CAN_EVENT_TYPE_NONE:
         case CAN_EVENT_TYPE_MASK:
@@ -541,13 +538,16 @@ private:
             error.error_code = ERROR_CODE_OBJECT_UNSUPPORTED_EVENT_TYPE;
             break;
         }
+
+        return CAN_RESULT_ERROR;
     }
 
     /// @brief Fills CAN frame with timer specific data.
     /// @param timer_type Type of the timer.
     /// @param can_frame CAN frame for filling with data.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, can_error_t &error)
+    /// @return The result of operation (should we send any CAN/Error frames or not)
+    can_result_t _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, can_error_t &error)
     {
         switch (timer_type)
         {
@@ -569,18 +569,21 @@ private:
             can_frame.initialized = false;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_UNSUPPORTED_TIMER_TYPE;
-            return;
+            return CAN_RESULT_ERROR;
         }
 
         memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
         can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
         can_frame.initialized = true;
+
+        return CAN_RESULT_CAN_FRAME;
     }
 
     /// @brief Fills CAN frame with request specific data.
     /// @param can_frame Incoming and outgoing CAN frame.
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
-    void _PrepareRequestCanFrame(can_frame_t &can_frame, can_error_t &error)
+    /// @return The result of operation (should we send any CAN/Error frames or not)
+    can_result_t _PrepareRequestCanFrame(can_frame_t &can_frame, can_error_t &error)
     {
         if (can_frame.raw_data_length != 1)
         {
@@ -588,7 +591,7 @@ private:
             error.function_id = CAN_FUNC_REQUEST_OUT_ERR;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_INCORRECT_REQUEST;
-            return;
+            return CAN_RESULT_ERROR;
         }
 
         clear_can_frame_struct(can_frame);
@@ -596,5 +599,7 @@ private:
         can_frame.function_id = CAN_FUNC_REQUEST_OUT_OK;
         memcpy(can_frame.data, _data_fields, _item_count * sizeof(T));
         can_frame.raw_data_length = 1 + _item_count * sizeof(T);
+
+        return CAN_RESULT_CAN_FRAME;
     }
 };
