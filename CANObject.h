@@ -139,8 +139,8 @@ public:
 
     void ClearDataFields()
     {
-        memset(_data_fields, 0, _item_count);
-        memset(_states_of_data_fields, 0, _item_count);
+        memset(_data_fields, 0, _item_count * sizeof(T));
+        memset(_states_of_data_fields, 0, _item_count * sizeof(T));
     }
 
     /// @brief Registers an external handler for events. It will be called when event occurs.
@@ -276,7 +276,7 @@ public:
         can_result_t handler_result = CAN_RESULT_ERROR;
 
         clear_can_frame_struct(can_frame);
-        if (max_event_type == CAN_EVENT_TYPE_NORMAL
+        if (max_event_type == CAN_EVENT_TYPE_NORMAL)
         {
             // CAN_EVENT_TYPE_NORMAL should be sent immediately, we don't need to check the time
             if (_event_handler != nullptr)
