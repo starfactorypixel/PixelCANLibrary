@@ -35,20 +35,8 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_SET_IN:
         return "set:in";
 
-    case CAN_FUNC_SET_OUT_OK:
-        return "set:out-ok";
-
-    case CAN_FUNC_SET_OUT_ERR:
-        return "set:out-error";
-
     case CAN_FUNC_REQUEST_IN:
         return "request:in";
-
-    case CAN_FUNC_REQUEST_OUT_OK:
-        return "request:out-ok";
-
-    case CAN_FUNC_REQUEST_OUT_ERR:
-        return "request:out-error";
 
     case CAN_FUNC_TIMER_NORMAL:
         return "timer:normal";

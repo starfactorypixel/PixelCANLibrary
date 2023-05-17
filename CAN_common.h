@@ -17,12 +17,12 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_NONE = 0x00,
 
     CAN_FUNC_SET_IN = 0x01,
-    CAN_FUNC_SET_OUT_OK = 0x41,
-    CAN_FUNC_SET_OUT_ERR = 0xC1,
+    // CAN_FUNC_SET_OUT_OK = 0x41,  // deleted 17.05,2023
+    // CAN_FUNC_SET_OUT_ERR = 0xC1, // deleted 17.05,2023
 
     CAN_FUNC_REQUEST_IN = 0x11,
-    CAN_FUNC_REQUEST_OUT_OK = 0x51,
-    CAN_FUNC_REQUEST_OUT_ERR = 0xD1,
+    // CAN_FUNC_REQUEST_OUT_OK = 0x51,  // deleted 17.05,2023
+    // CAN_FUNC_REQUEST_OUT_ERR = 0xD1, // deleted 17.05,2023
 
     CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
     CAN_FUNC_SEND_RAW_INIT_OUT_OK = 0x70,

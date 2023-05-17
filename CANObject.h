@@ -129,6 +129,10 @@ public:
     /// @brief Default constructor is forbidden.
     CANObject() = delete;
 
+    /// @brief Constructor of the CANObject
+    /// @param id ID of the object
+    /// @param timer_period_ms Period of a timer function. If CAN_TIMER_DISABLED then timer is disabled
+    /// @param error_period_ms Repeation delay of an error event. If CAN_ERROR_DISABLED then error event is disabled
     CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED)
         : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms)
     {
@@ -137,6 +141,7 @@ public:
 
     virtual ~CANObject() = default;
 
+    /// @brief Clears all data fields and related structures.
     void ClearDataFields()
     {
         memset(_data_fields, 0, _item_count * sizeof(T));
@@ -295,20 +300,23 @@ public:
                     _states_of_data_fields[i] = (_states_of_data_fields[i] & (uint8_t)CAN_TIMER_TYPE_MASK) | CAN_EVENT_TYPE_NONE;
             }
         }
-        else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != CAN_ERROR_DISABLED && time - _last_event_time >= _error_period)
+        else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != CAN_ERROR_DISABLED)
         {
-            // TODO: A bug or a feature found =)
+            // enclosed if fixes that: 
+            // A bug or a feature found =)
             // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
-
-            if (_event_handler != nullptr)
+            if (time - _last_event_time >= _error_period)
             {
-                handler_result = _event_handler(can_frame, max_event_type, error);
+                if (_event_handler != nullptr)
+                {
+                    handler_result = _event_handler(can_frame, max_event_type, error);
+                }
+                else
+                {
+                    handler_result = _PrepareEventCanFrame(max_event_type, can_frame, error);
+                }
+                _last_event_time = time;
             }
-            else
-            {
-                handler_result = _PrepareEventCanFrame(max_event_type, can_frame, error);
-            }
-            _last_event_time = time;
         }
         else if (max_timer_type != CAN_TIMER_TYPE_NONE && _timer_period != CAN_TIMER_DISABLED && time - _last_timer_time >= _timer_period)
         {
@@ -350,11 +358,11 @@ public:
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING;
-                error.function_id = CAN_FUNC_SET_OUT_ERR;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
             {
-                error.function_id = CAN_FUNC_SET_OUT_ERR;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
 
@@ -369,7 +377,7 @@ public:
             }
             if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
             {
-                error.function_id = CAN_FUNC_REQUEST_OUT_ERR;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
 
@@ -588,7 +596,7 @@ private:
         if (can_frame.raw_data_length != 1)
         {
             can_frame.initialized = false;
-            error.function_id = CAN_FUNC_REQUEST_OUT_ERR;
+            error.function_id = CAN_FUNC_EVENT_ERROR;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
             error.error_code = ERROR_CODE_OBJECT_INCORRECT_REQUEST;
             return CAN_RESULT_ERROR;
@@ -596,7 +604,7 @@ private:
 
         clear_can_frame_struct(can_frame);
         can_frame.initialized = true;
-        can_frame.function_id = CAN_FUNC_REQUEST_OUT_OK;
+        can_frame.function_id = CAN_FUNC_EVENT_OK;
         memcpy(can_frame.data, _data_fields, _item_count * sizeof(T));
         can_frame.raw_data_length = 1 + _item_count * sizeof(T);
 
