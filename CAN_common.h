@@ -156,7 +156,7 @@ const char *get_function_name(can_function_id_t function_id);
 const char *get_timer_type_name(timer_type_t timer_type);
 const char *get_event_type_name(event_type_t event_type);
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code);
-void log_can_frame(can_frame_t &can_frame);
-void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length);
+// void log_can_frame(can_frame_t &can_frame);
+// void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length);
 
 #endif // CAN_COMMON_H

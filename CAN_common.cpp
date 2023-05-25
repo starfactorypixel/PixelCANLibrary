@@ -1,6 +1,5 @@
 #include <string.h>
 #include "CAN_common.h"
-#include "logger.h"
 
 /// @brief Clears all attributes of CAN frame
 /// @param can_frame CAN frame to clear
@@ -190,6 +189,7 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 #endif // DEBUG
 }
 
+/*
 /// @brief Debug print of the CAN frame structure to the system console or to the UART serial
 /// @param can_frame CAN frame to print
 void log_can_frame(can_frame_t &can_frame)
@@ -234,3 +234,4 @@ void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length)
     log_can_frame(can_frame);
 #endif // DEBUG
 }
+*/
