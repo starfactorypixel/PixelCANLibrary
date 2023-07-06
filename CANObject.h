@@ -41,21 +41,32 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionSet() = 0;
 
-    /// @brief Registers an external handler for timers. It will be called when timer occurs.
+    /// @brief Registers an external handler for timer. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
-    /// @param period_ms Timers period in milliseconds.
+    /// @param period_ms Timer's period in milliseconds.
+    /// @param flood_mode 'true' for work in flood mode: timer will send frame every period regardless of actual data updates
+    ///                   'false' for work in frame limit mode: timer will send frames every period when the data was changed; but not more often than actual data updates.
+    ///                   Example #1: timer in the frame limit mode, period is 250 ms, data updates every 30 ms, frame will be sent every 250 ms.
+    ///                   Example #2: timer in the frame limit mode, period is 250 ms, data updates every 800 ms, frame will be sent every 800 ms.
+    ///                   Example #3: timer in the flood mode, period is 250 ms, data was updated once on boot, frame will be sent every 250 ms.
     /// @return CANObjectInterface reference
-    virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) = 0;
+    virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms, bool flood_mode = false) = 0;
 
-    /// @brief Registers an external handler for timers. It will be called when timer occurs.
+    /// @brief Registers an external handler for timer. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler) = 0;
 
-    /// @brief Sets the value of timers period.
-    /// @param period_ms Timers period in milliseconds.
+    /// @brief Sets the value of timer's period.
+    /// @param period_ms Timer's period in milliseconds.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &SetTimerPeriod(uint16_t period_ms) = 0;
+
+    /// @brief Specify the mode of the timer (flood or frame limit)
+    /// @param flood_mode 'true' for work in flood mode: timer will send frame every period regardless of actual data updates
+    ///                   'false' for work in frame limit mode: timer will send frames every period when the data was changed; but not more often than actual data updates.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetTimerFloodMode(bool flood_mode) = 0;
 
     /// @brief Checks whether the external timer function handler is set.
     /// @return 'true' if the external handler exists, `false` if not
@@ -91,9 +102,17 @@ public:
     /// @return Delay for the error evends in milliseconds.
     virtual uint16_t GetErrorEventDelay() = 0;
 
-    /// @brief Returns the value of timers period.
-    /// @return Timers period in milliseconds.
+    /// @brief Returns the value of timer's period.
+    /// @return Timer's period in milliseconds.
     virtual uint16_t GetTimerPeriod() = 0;
+
+    /// @brief Return the timer's mode.
+    /// @return 'true' if timer works in flood mode, 'false' if timer works in frame limit mode.
+    virtual bool IsTimerInFloodMode() = 0;
+
+    /// @brief Checks whether the data has been updated by SetValue() since the last frame was sent.
+    /// @return 'true' if there is new data.
+    virtual bool DoesTimerHaveNewData() = 0;
 
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
@@ -106,8 +125,8 @@ public:
     /// @brief Universal setter for CANObject's data fields
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
     /// @param value Pointer to the variable with data. The size of data depends of CANObject.
-    /// @param timer_type The type of value for timers. With this we can specify is value normal, in warning range or in critical range.
-    /// @param event_type The type of value for events. With this we can specify whether an event and what kind of event it is.
+    /// @param timer_type The type of value for timer. With this we can specify is value normal, in warning range or in critical range.
+    /// @param event_type The type of value for event. With this we can specify whether an event and what kind of event it is.
     virtual void SetValue(uint8_t index, void *value,
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) = 0;
@@ -204,19 +223,25 @@ public:
         return _set_handler != nullptr;
     };
 
-    /// @brief Registers an external handler for timers. It will be called when timer occurs.
+    /// @brief Registers an external handler for timer. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
-    /// @param period_ms Timers period in milliseconds.
+    /// @param period_ms Timer's period in milliseconds.
+    /// @param flood_mode 'true' for work in flood mode: timer will send frame every period regardless of actual data updates
+    ///                   'false' for work in frame limit mode: timer will send frames every period when the data was changed; but not more often than actual data updates.
+    ///                   Example #1: timer in the frame limit mode, period is 250 ms, data updates every 30 ms, frame will be sent every 250 ms.
+    ///                   Example #2: timer in the frame limit mode, period is 250 ms, data updates every 800 ms, frame will be sent every 800 ms.
+    ///                   Example #3: timer in the flood mode, period is 250 ms, data was updated once on boot, frame will be sent every 250 ms.
     /// @return CANObjectInterface reference
-    virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms) override
+    virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler, uint16_t period_ms, bool flood_mode = false) override
     {
         RegisterFunctionTimer(timer_handler);
         SetTimerPeriod(period_ms);
+        SetTimerFloodMode(flood_mode);
 
         return *this;
     };
 
-    /// @brief Registers an external handler for timers. It will be called when timer occurs.
+    /// @brief Registers an external handler for timer. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &RegisterFunctionTimer(timer_handler_t timer_handler) override
@@ -226,12 +251,23 @@ public:
         return *this;
     };
 
-    /// @brief Sets the value of timers period.
-    /// @param period_ms Timers period in milliseconds.
+    /// @brief Sets the value of timer's period.
+    /// @param period_ms Timer's period in milliseconds.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &SetTimerPeriod(uint16_t period_ms) override
     {
         _timer_period = period_ms;
+
+        return *this;
+    };
+
+    /// @brief Specify the mode of the timer (flood or frame limit)
+    /// @param flood_mode 'true' for work in flood mode: timer will send frame every period regardless of actual data updates
+    ///                   'false' for work in frame limit mode: timer will send frames every period when the data was changed; but not more often than actual data updates.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetTimerFloodMode(bool flood_mode) override
+    {
+        _flood_mode = flood_mode;
 
         return *this;
     };
@@ -320,15 +356,19 @@ public:
         }
         else if (max_timer_type != CAN_TIMER_TYPE_NONE && _timer_period != CAN_TIMER_DISABLED && time - _last_timer_time >= _timer_period)
         {
-            if (_timer_handler != nullptr)
+            if (DoesTimerHaveNewData() || IsTimerInFloodMode())
             {
-                handler_result = _timer_handler(can_frame, max_timer_type, error);
+                if (_timer_handler != nullptr)
+                {
+                    handler_result = _timer_handler(can_frame, max_timer_type, error);
+                }
+                else
+                {
+                    handler_result = _PrepareTimerCanFrame(max_timer_type, can_frame, error);
+                }
+                _last_timer_time = time;
+                _has_new_data = false;
             }
-            else
-            {
-                handler_result = _PrepareTimerCanFrame(max_timer_type, can_frame, error);
-            }
-            _last_timer_time = time;
         }
 
         return handler_result;
@@ -418,11 +458,25 @@ public:
         return _error_period;
     };
 
-    /// @brief Returns the value of timers period.
-    /// @return Timers period in milliseconds.
+    /// @brief Returns the value of timer's period.
+    /// @return Timer's period in milliseconds.
     virtual uint16_t GetTimerPeriod() override
     {
         return _timer_period;
+    };
+
+    /// @brief Return the timer's mode.
+    /// @return 'true' if timer works in flood mode, 'false' if timer works in frame limit mode.
+    virtual bool IsTimerInFloodMode() override
+    {
+        return _flood_mode;
+    };
+
+    /// @brief Checks whether the data has been updated by SetValue() since the last frame was sent.
+    /// @return 'true' if there is new data.
+    virtual bool DoesTimerHaveNewData() override
+    {
+        return _has_new_data;
     };
 
     /// @brief Returns number of data fields in the CANObject
@@ -442,8 +496,8 @@ public:
     /// @brief Universal setter for CANObject's data fields
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
     /// @param value Pointer to the variable with data. The size of data depends of CANObject.
-    /// @param timer_type The type of value for timers. With this we can specify is value normal, in warning range or in critical range.
-    /// @param event_type The type of value for events. With this we can specify whether an event and what kind of event it is.
+    /// @param timer_type The type of value for timer. With this we can specify is value normal, in warning range or in critical range.
+    /// @param event_type The type of value for event. With this we can specify whether an event and what kind of event it is.
     virtual void SetValue(uint8_t index, void *value,
                           timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                           event_type_t event_type = CAN_EVENT_TYPE_NONE) override
@@ -457,8 +511,8 @@ public:
     /// @brief The variation of SetValue() method with typed value parameter.
     /// @param index Index of data field to set. If the index is out of range, nothing will be done.
     /// @param value The value to set to the specified data field.
-    /// @param timer_type The type of value for timers. With this we can specify is value normal, in warning range or in critical range.
-    /// @param event_type The type of value for events. With this we can specify whether an event and what kind of event it is.
+    /// @param timer_type The type of value for timer. With this we can specify is value normal, in warning range or in critical range.
+    /// @param event_type The type of value for event. With this we can specify whether an event and what kind of event it is.
     void SetValue(uint8_t index, T value,
                   timer_type_t timer_type = CAN_TIMER_TYPE_NONE,
                   event_type_t event_type = CAN_EVENT_TYPE_NONE)
@@ -468,6 +522,7 @@ public:
 
         _data_fields[index] = value;
         _states_of_data_fields[index] = timer_type | event_type;
+        _has_new_data = true;
     };
 
     /// @brief Universal getter for CANObject's data fields
@@ -505,6 +560,9 @@ private:
 
     uint16_t _timer_period = CAN_TIMER_DISABLED;
     uint16_t _error_period = CAN_ERROR_DISABLED;
+    
+    bool _flood_mode = false;
+    bool _has_new_data = false;
 
     event_handler_t _event_handler = nullptr;
     set_handler_t _set_handler = nullptr;
