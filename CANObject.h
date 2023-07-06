@@ -152,8 +152,13 @@ public:
     /// @param id ID of the object
     /// @param timer_period_ms Period of a timer function. If CAN_TIMER_DISABLED then timer is disabled
     /// @param error_period_ms Repeation delay of an error event. If CAN_ERROR_DISABLED then error event is disabled
-    CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED)
-        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms)
+    /// @param flood_mode 'true' for work in flood mode: timer will send frame every period regardless of actual data updates
+    ///                   'false' for work in frame limit mode: timer will send frames every period when the data was changed; but not more often than actual data updates.
+    ///                   Example #1: timer in the frame limit mode, period is 250 ms, data updates every 30 ms, frame will be sent every 250 ms.
+    ///                   Example #2: timer in the frame limit mode, period is 250 ms, data updates every 800 ms, frame will be sent every 800 ms.
+    ///                   Example #3: timer in the flood mode, period is 250 ms, data was updated once on boot, frame will be sent every 250 ms.
+    CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED, bool flood_mode = false)
+        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms), _flood_mode(flood_mode)
     {
         ClearDataFields();
     };
