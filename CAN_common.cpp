@@ -25,7 +25,7 @@ void clear_can_error_struct(can_error_t &error)
 /// @return Null-terminated string with name of the function
 const char *get_function_name(can_function_id_t function_id)
 {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
     switch (function_id)
     {
     case CAN_FUNC_NONE:
@@ -82,7 +82,7 @@ const char *get_function_name(can_function_id_t function_id)
 /// @return Null-terminated string with name of the timer type.
 const char *get_timer_type_name(timer_type_t timer_type)
 {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
     switch (timer_type)
     {
     case CAN_TIMER_TYPE_NONE:
@@ -112,7 +112,7 @@ const char *get_timer_type_name(timer_type_t timer_type)
 /// @return Null-terminated string with name of the event type.
 const char *get_event_type_name(event_type_t event_type)
 {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
     switch (event_type)
     {
     case CAN_EVENT_TYPE_NONE:
@@ -140,14 +140,25 @@ const char *get_event_type_name(event_type_t event_type)
 /// @return Null-terminated string with name of the event type.
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code)
 {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
     switch (error_section)
     {
     case ERROR_SECTION_NONE:
         return "error: section [none], code [-]";
 
     case ERROR_SECTION_CAN_MANAGER:
-        return "error: section [CANManager], code [-]";
+        switch ((error_code_manager_t)error_code)
+        {
+        case ERROR_CODE_MANAGER_NONE:
+            return "error: section [CANManager], code [none]";
+       
+        case ERROR_CODE_MANAGER_SOMETHING_WRONG:
+            return "error: section [CANManager], code [something went wrong]";
+
+        default:
+            return "error: section [CANManager], code [unknown]";
+        }
+        break;
 
     case ERROR_SECTION_CAN_OBJECT:
         switch ((error_code_object_t)error_code)
@@ -169,9 +180,15 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_INCORRECT_REQUEST:
             return "error: section [CANObject], code [incorrect request]";
-        
+
         case ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW:
             return "error: section [CANObject], code [incorrect function workflow]";
+
+        case ERROR_CODE_OBJECT_HAVE_NO_DATA:
+            return "error: section [CANObject], code [have no data]";
+
+        case ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH:
+            return "error: section [CANObject], code [incorrect data length]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";

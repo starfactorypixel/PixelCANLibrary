@@ -125,6 +125,13 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
 
+enum error_code_manager_t : uint8_t
+{
+    ERROR_CODE_MANAGER_NONE = 0x00,
+
+    ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
+};
+
 struct can_error_t
 {
     can_function_id_t function_id = CAN_FUNC_NONE;
