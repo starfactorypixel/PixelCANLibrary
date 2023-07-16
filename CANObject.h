@@ -83,16 +83,25 @@ public:
 
     /// @brief Performs CANObjects processing
     /// @param time Current time
-    /// @param can_frame CAN frame for storing the outgoing data
-    /// @param error An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param can_frame [OUT] CAN frame for storing the outgoing data
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
     /// @return The result of CANObject processing (should we send any CAN frames or not)
     virtual can_result_t Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) = 0;
 
     /// @brief Process incoming CAN frame
-    /// @param can_frame CAN frame for processing
-    /// @param error An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param can_frame [OUT] CAN frame for processing
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
     /// @return The result of incoming can frame processing (should we send any CAN frames or not)
     virtual can_result_t InputCanFrame(can_frame_t &can_frame, can_error_t &error) = 0;
+
+    /// @brief Fills CAN frame from the object with specified data
+    /// @param can_frame [OUT] CAN frame for processing
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param function_id [IN] CAN function ID
+    /// @param data [IN] Frame data to send in CAN frame
+    /// @param data_length [IN] Frame data length
+    /// @return The result of incoming can frame processing (should we send any CAN frames or not)
+    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0 ) = 0;
 
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
@@ -449,6 +458,18 @@ public:
         return handler_result;
     };
 
+    /// @brief Fills CAN frame from the object with specified data
+    /// @param can_frame [OUT] CAN frame for processing
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param function_id [IN] CAN function ID
+    /// @param data [IN] Frame data to send in CAN frame
+    /// @param data_length [IN] Frame data length
+    /// @return The result of incoming can frame processing (should we send any CAN frames or not)
+    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0 ) override
+    {
+        return _PrepareRawCanFrame(can_frame, error, function_id, data, data_length);
+    };
+
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
     virtual can_object_id_t GetId() override
@@ -584,11 +605,7 @@ private:
         switch (event_type)
         {
         case CAN_EVENT_TYPE_NORMAL:
-            can_frame.function_id = CAN_FUNC_EVENT_OK;
-            memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
-            can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
-            can_frame.initialized = true;
-            return CAN_RESULT_CAN_FRAME;
+            return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_EVENT_OK, _data_fields, sizeof(_data_fields));
 
         case CAN_EVENT_TYPE_ERROR:
             can_frame.initialized = false;
@@ -620,18 +637,20 @@ private:
     /// @return The result of operation (should we send any CAN/Error frames or not)
     can_result_t _PrepareTimerCanFrame(timer_type_t timer_type, can_frame_t &can_frame, can_error_t &error)
     {
+        can_function_id_t func_id = CAN_FUNC_NONE;
+
         switch (timer_type)
         {
         case CAN_TIMER_TYPE_NORMAL:
-            can_frame.function_id = CAN_FUNC_TIMER_NORMAL;
+            func_id = CAN_FUNC_TIMER_NORMAL;
             break;
 
         case CAN_TIMER_TYPE_WARNING:
-            can_frame.function_id = CAN_FUNC_TIMER_WARNING;
+            func_id = CAN_FUNC_TIMER_WARNING;
             break;
 
         case CAN_TIMER_TYPE_CRITICAL:
-            can_frame.function_id = CAN_FUNC_TIMER_CRITICAL;
+            func_id = CAN_FUNC_TIMER_CRITICAL;
             break;
 
         case CAN_TIMER_TYPE_NONE:
@@ -643,11 +662,7 @@ private:
             return CAN_RESULT_ERROR;
         }
 
-        memcpy(can_frame.data, _data_fields, sizeof(_data_fields));
-        can_frame.raw_data_length = sizeof(can_frame.function_id) + sizeof(_data_fields);
-        can_frame.initialized = true;
-
-        return CAN_RESULT_CAN_FRAME;
+        return _PrepareRawCanFrame(can_frame, error, func_id, _data_fields, sizeof(_data_fields));
     }
 
     /// @brief Fills CAN frame with request specific data.
@@ -665,12 +680,44 @@ private:
             return CAN_RESULT_ERROR;
         }
 
+        return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_EVENT_OK, _data_fields, _item_count * sizeof(T));
+    }
+
+    /// @brief Fills CAN frame with specified data
+    /// @param can_frame [OUT] CAN frame for processing
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param function_id [IN] CAN function ID
+    /// @param data [IN] Frame data to send in CAN frame
+    /// @param data_length [IN] Frame data length
+    /// @return The result of incoming can frame processing (should we send any CAN frames or not)
+    virtual can_result_t _PrepareRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, void *data = nullptr, uint8_t data_length = 0)
+    {
+        if (data == nullptr && data_length != 0)
+        {
+            can_frame.initialized = false;
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_HAVE_NO_DATA;
+            return CAN_RESULT_ERROR;
+        }
+
+        if (data_length > CAN_FRAME_MAX_PAYLOAD)
+        {
+            can_frame.initialized = false;
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH;
+            return CAN_RESULT_ERROR;
+        }
+
         clear_can_frame_struct(can_frame);
+        can_frame.object_id = GetId();
+        can_frame.function_id = function_id;
+        can_frame.raw_data_length = data_length + 1;
+        if (data != nullptr)
+        {
+            memcpy(can_frame.data, data, data_length);
+        }
         can_frame.initialized = true;
-        can_frame.function_id = CAN_FUNC_EVENT_OK;
-        memcpy(can_frame.data, _data_fields, _item_count * sizeof(T));
-        can_frame.raw_data_length = 1 + _item_count * sizeof(T);
 
         return CAN_RESULT_CAN_FRAME;
-    }
+    };
 };
