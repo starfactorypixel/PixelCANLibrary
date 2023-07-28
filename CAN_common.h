@@ -128,6 +128,7 @@ enum error_code_object_t : uint8_t
 enum error_code_manager_t : uint8_t
 {
     ERROR_CODE_MANAGER_NONE = 0x00,
+    ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK = 0x01,
 
     ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };

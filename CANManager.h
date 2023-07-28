@@ -211,9 +211,18 @@ public:
 
         can_object->FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
 
-        if (!_tx_can_frame.initialized && _tx_error.error_section != ERROR_SECTION_NONE)
+        if (!_tx_can_frame.initialized)
         {
-            _FillErrorCanFrame(_tx_can_frame, _tx_error);
+            if (_tx_error.error_section == ERROR_SECTION_NONE)
+            {
+                // both the CAN frame and the error structure are blank
+                _tx_error.error_section = ERROR_SECTION_CAN_MANAGER;
+                _tx_error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
+            }
+            else
+            {
+                _FillErrorCanFrame(_tx_can_frame, _tx_error);
+            }
         }
 
         // restoring ID (if it was overwritten by the handler)
