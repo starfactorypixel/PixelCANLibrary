@@ -219,8 +219,6 @@ public:
                 _tx_error.error_section = ERROR_SECTION_CAN_MANAGER;
                 _tx_error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
             }
-            else
-            {
             _FillErrorCanFrame(_tx_can_frame, _tx_error);
         }
 
