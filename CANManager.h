@@ -139,10 +139,7 @@ public:
                     continue;
                 }
 
-                if (!_can_frame_buffer[i].initialized && _tx_error.error_section != ERROR_SECTION_NONE)
-                {
-                    _FillErrorCanFrame(_can_frame_buffer[i], _tx_error);
-                }
+                _ValidateAndFillErrorCanFrame(_can_frame_buffer[i], _tx_error);
                 _SendCanData(_can_frame_buffer[i]);
                 _can_frame_buffer[i].initialized = false;
             }
@@ -159,10 +156,7 @@ public:
             if (CAN_RESULT_IGNORE == _objects[i]->Process(time, _tx_can_frame, _tx_error))
                 continue;
 
-            if (!_tx_can_frame.initialized && _tx_error.error_section != ERROR_SECTION_NONE)
-            {
-                _FillErrorCanFrame(_tx_can_frame, _tx_error);
-            }
+            _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
 
             // restoring ID (if it was overwritten by the handler)
             _tx_can_frame.object_id = _objects[i]->GetId();
@@ -211,16 +205,7 @@ public:
 
         can_object->FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
 
-        if (!_tx_can_frame.initialized)
-        {
-            if (_tx_error.error_section == ERROR_SECTION_NONE)
-            {
-                // both the CAN frame and the error structure are blank
-                _tx_error.error_section = ERROR_SECTION_CAN_MANAGER;
-                _tx_error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
-            }
-            _FillErrorCanFrame(_tx_can_frame, _tx_error);
-        }
+        _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
 
         // restoring ID (if it was overwritten by the handler)
         _tx_can_frame.object_id = can_object->GetId();
@@ -265,6 +250,9 @@ private:
         clear_can_frame_struct(_tx_can_frame);
     }
 
+    /// @brief Fills CAN frame with correct error data
+    /// @param can_frame [OUT] CAN frame to fill
+    /// @param error [IN] Error structure with error section and error code
     void _FillErrorCanFrame(can_frame_t &can_frame, can_error_t error)
     {
         if (error.error_section == ERROR_SECTION_NONE)
@@ -285,5 +273,22 @@ private:
         can_frame.data[0] = error.error_section;
         can_frame.data[1] = error.error_code;
         can_frame.raw_data_length = sizeof(can_frame.function_id) + 2;
+    }
+
+    /// @brief Checks that either the CAN frame or the error structure is specified. Fills CAN frame with error data if needed.
+    /// @param can_frame [IN, OUT] CAN frame to check and to fill
+    /// @param error [IN] Error structure.
+    void _ValidateAndFillErrorCanFrame(can_frame_t &can_frame, can_error_t error)
+    {
+        if (can_frame.initialized)
+            return; // CAN frame is specified, it's ok
+        
+        if (error.error_section == ERROR_SECTION_NONE)
+        {
+            // both the CAN frame and the error structure are blank
+            error.error_section = ERROR_SECTION_CAN_MANAGER;
+            error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
+        }
+        _FillErrorCanFrame(can_frame, error);
     }
 };
