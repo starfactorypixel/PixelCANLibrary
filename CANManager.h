@@ -222,7 +222,6 @@ public:
             else
             {
                 _FillErrorCanFrame(_tx_can_frame, _tx_error);
-            }
         }
 
         // restoring ID (if it was overwritten by the handler)
