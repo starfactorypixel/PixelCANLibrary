@@ -328,7 +328,7 @@ public:
                 max_event_type = (event_type_t)(_states_of_data_fields[i] & (uint8_t)CAN_EVENT_TYPE_MASK);
         }
 
-        can_result_t handler_result = CAN_RESULT_ERROR;
+        can_result_t handler_result = CAN_RESULT_IGNORE;
 
         clear_can_frame_struct(can_frame);
         if (max_event_type == CAN_EVENT_TYPE_NORMAL)
