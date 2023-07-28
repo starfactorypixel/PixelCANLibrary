@@ -194,7 +194,7 @@ public:
         return true;
     }
 
-    /// @brief Sends custom CAN frame
+    /// @brief Sends custom CAN frame. This method does nothing in case CANObject with specified ID does not exist.
     /// @param id Sender CANObject ID
     /// @param function_id CAN function ID
     /// @param data Frame data to send in CAN frame
@@ -207,15 +207,7 @@ public:
         CANObjectInterface *can_object = GetCanObject(id);
 
         if (can_object == nullptr)
-        {
-            /*
-            _tx_error.error_section = ERROR_SECTION_CAN_MANAGER;
-            _tx_error.error_code = ERROR_CODE_MANAGER_CAN_OBJECT_DOES_NOT_EXIST;
-            _FillErrorCanFrame(_tx_can_frame, _tx_error);
-            _SendCanData(_tx_can_frame);
-            */
-            return;
-        }
+            return; // CANObject does not exist. We can't send error frame, because all frames are related to CANObjects. 
 
         can_object->FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
 
