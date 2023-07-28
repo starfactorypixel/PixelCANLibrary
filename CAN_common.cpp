@@ -151,6 +151,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
         {
         case ERROR_CODE_MANAGER_NONE:
             return "error: section [CANManager], code [none]";
+
+        case ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK:
+            return "error: section [CANManager], code [CAN frame and error structure are both blank after handlers]";
        
         case ERROR_CODE_MANAGER_SOMETHING_WRONG:
             return "error: section [CANManager], code [something went wrong]";
