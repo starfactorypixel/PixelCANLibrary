@@ -35,11 +35,11 @@ public:
     virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) = 0;
 
     /// @brief Sends custom CAN frame
-    /// @param id Sender CANObject ID
+    /// @param can_object Sender CANObject. It is acceptable to use unregistered CANObject for generation of frames.
     /// @param function_id CAN function ID
     /// @param data Frame data to send in CAN frame
     /// @param data_length Frame data length
-    virtual void SendCustomFrame(can_object_id_t id, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) = 0;
+    virtual void SendCustomFrame(CANObjectInterface &can_object, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) = 0;
 };
 
 /******************************************************************************************
@@ -188,28 +188,21 @@ public:
         return true;
     }
 
-    /// @brief Sends custom CAN frame. This method does nothing in case CANObject with specified ID does not exist.
-    /// @param id Sender CANObject ID
+    /// @brief Sends custom CAN frame
+    /// @param can_object Sender CANObject. It is acceptable to use unregistered CANObject for generation of frames.
     /// @param function_id CAN function ID
     /// @param data Frame data to send in CAN frame
     /// @param data_length Frame data length
-    virtual void SendCustomFrame(can_object_id_t id, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) override
+    virtual void SendCustomFrame(CANObjectInterface &can_object, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) override
     {
         clear_can_error_struct(_tx_error);
         clear_can_frame_struct(_tx_can_frame);
 
-        CANObjectInterface *can_object = GetCanObject(id);
-
-        if (can_object == nullptr)
-            return; // CANObject does not exist. We can't send error frame, because all frames are related to CANObjects. 
-
-        can_object->FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
-
+        can_object.FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
         _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
 
         // restoring ID (if it was overwritten by the handler)
-        _tx_can_frame.object_id = can_object->GetId();
-
+        _tx_can_frame.object_id = can_object.GetId();
         _SendCanData(_tx_can_frame);
     };
 
