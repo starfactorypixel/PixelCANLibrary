@@ -312,8 +312,8 @@ public:
 
     /// @brief Performs processing of CANObjects
     /// @param time Current time
-    /// @param can_frame OUT: CAN frame for storing the outgoing data
-    /// @param error OUT: An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param can_frame [OUT] CAN frame for storing the outgoing data
+    /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
     /// @return The result of CANObject processing (should we send any CAN frames or not)
     virtual can_result_t Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) override
     {
@@ -459,7 +459,7 @@ public:
     };
 
     /// @brief Fills CAN frame from the object with specified data
-    /// @param can_frame [OUT] CAN frame for processing
+    /// @param can_frame [OUT] CAN frame for filling
     /// @param error [OUT] An outgoing error structure. It will be filled by object if something went wrong.
     /// @param function_id [IN] CAN function ID
     /// @param data [IN] Frame data to send in CAN frame
