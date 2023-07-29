@@ -46,6 +46,15 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_TIMER_CRITICAL:
         return "timer:critical";
 
+    case CAN_FUNC_SYSTEM_TIMER_NORMAL:
+        return "system timer:normal";
+
+    case CAN_FUNC_SYSTEM_TIMER_WARNING:
+        return "system timer:warning";
+
+    case CAN_FUNC_SYSTEM_TIMER_CRITICAL:
+        return "system timer:critical";
+
     case CAN_FUNC_EVENT_OK:
         return "event:normal";
 
@@ -69,6 +78,8 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_SEND_RAW_FINISH_IN:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
+        return "correct:other";
+
     default:
         return "unknown";
     }
