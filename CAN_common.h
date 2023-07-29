@@ -168,7 +168,7 @@ using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &erro
 class CANObjectInterface;
 void set_block_info_params(CANObjectInterface &block_sys_object);
 void set_block_health_params(CANObjectInterface &block_sys_object);
-void set_block_cfg_params(CANObjectInterface &block_sys_object);
+void set_block_features_params(CANObjectInterface &block_sys_object);
 void set_block_error_params(CANObjectInterface &block_sys_object);
 
 /*************************************************************************************************

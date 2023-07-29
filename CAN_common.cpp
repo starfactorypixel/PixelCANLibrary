@@ -56,16 +56,17 @@ void set_block_health_params(CANObjectInterface &block_sys_object)
     block_sys_object.RegisterFunctionTimer(nullptr);
 };
 
-/// @brief Common BlockCfg parameters will be applied to the specified CANObject.
-///        All BlockCfg objects has:
-///          - disabled timers and flood mode
+/// @brief Common BlockFeatures parameters will be applied to the specified CANObject.
+///        All BlockFeatures objects has:
+///          - enabled timers (15000 ms period)
+///          - enabled flood mode
 ///          - disabled events
 ///          - no external handlers for events, timers, set & request commends
 /// @param block_sys_object Target CANObject
-void set_block_cfg_params(CANObjectInterface &block_sys_object)
+void set_block_features_params(CANObjectInterface &block_sys_object)
 {
-    block_sys_object.SetTimerFloodMode(false);
-    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetTimerFloodMode(true);
+    block_sys_object.SetTimerPeriod(15000);
     block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
     block_sys_object.RegisterFunctionEvent(nullptr);
     block_sys_object.RegisterFunctionRequest(nullptr);
