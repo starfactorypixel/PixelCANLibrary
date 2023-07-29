@@ -1,5 +1,6 @@
 #include <string.h>
 #include "CAN_common.h"
+#include "CANObject.h"
 
 /// @brief Clears all attributes of CAN frame
 /// @param can_frame CAN frame to clear
@@ -19,6 +20,75 @@ void clear_can_error_struct(can_error_t &error)
     error.error_section = ERROR_SECTION_NONE;
     error.error_code = 0;
 }
+
+/// @brief Common BlockInfo parameters will be applied to the specified CANObject.
+///        All BlockInfo objects has:
+///          - enabled timers (15000 ms period)
+///          - enabled flood mode
+///          - disabled events
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_info_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(true);
+    block_sys_object.SetTimerPeriod(15000);
+    block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+}
+
+/// @brief Common BlockHealth parameters will be applied to the specified CANObject.
+///        All BlockHealth objects has:
+///          - disabled timers and flood mode
+///          - enabled events (300 ms period)
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_health_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(false);
+    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
+
+/// @brief Common BlockCfg parameters will be applied to the specified CANObject.
+///        All BlockCfg objects has:
+///          - disabled timers and flood mode
+///          - disabled events
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_cfg_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(false);
+    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
+
+/// @brief Common BlockError parameters will be applied to the specified CANObject.
+///        All BlockError objects has:
+///          - disabled timers and flood mode
+///          - enabled events (300 ms period)
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_error_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(false);
+    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
 
 /// @brief Debug logger function: decodes function ID to to human-readable string.
 /// @param function_id ID of the function.
