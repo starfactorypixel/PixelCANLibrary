@@ -135,6 +135,7 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW = 0x06,
     ERROR_CODE_OBJECT_HAVE_NO_DATA = 0x07,
     ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH = 0x08,
+    ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA = 0x09,
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };

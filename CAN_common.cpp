@@ -33,6 +33,7 @@ void set_block_info_params(CANObjectInterface &block_sys_object)
     block_sys_object.SetTimerFloodMode(true);
     block_sys_object.SetTimerPeriod(15000);
     block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO);
     block_sys_object.RegisterFunctionEvent(nullptr);
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
@@ -50,6 +51,7 @@ void set_block_health_params(CANObjectInterface &block_sys_object)
     block_sys_object.SetTimerFloodMode(false);
     block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
     block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH);
     block_sys_object.RegisterFunctionEvent(nullptr);
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
@@ -68,6 +70,7 @@ void set_block_features_params(CANObjectInterface &block_sys_object)
     block_sys_object.SetTimerFloodMode(true);
     block_sys_object.SetTimerPeriod(15000);
     block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES);
     block_sys_object.RegisterFunctionEvent(nullptr);
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
@@ -85,6 +88,7 @@ void set_block_error_params(CANObjectInterface &block_sys_object)
     block_sys_object.SetTimerFloodMode(false);
     block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
     block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR);
     block_sys_object.RegisterFunctionEvent(nullptr);
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
@@ -313,6 +317,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH:
             return "error: section [CANObject], code [incorrect data length]";
+
+        case ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA:
+            return "error: section [CANObject], code [system request should not have any frame data]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";

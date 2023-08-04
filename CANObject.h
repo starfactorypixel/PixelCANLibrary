@@ -81,6 +81,11 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionRequest() = 0;
 
+    /// @brief Sets type of object.
+    /// @param object_type type of the object ot set.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetObjectType(object_type_t object_type) = 0;
+
     /// @brief Performs CANObjects processing
     /// @param time Current time
     /// @param can_frame [OUT] CAN frame for storing the outgoing data
@@ -101,7 +106,7 @@ public:
     /// @param data [IN] Frame data to send in CAN frame
     /// @param data_length [IN] Frame data length
     /// @return The result of incoming can frame processing (should we send any CAN frames or not)
-    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0 ) = 0;
+    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) = 0;
 
     /// @brief Returns CANObject ID
     /// @return Returns CANObject ID
@@ -122,6 +127,22 @@ public:
     /// @brief Checks whether the data has been updated by SetValue() since the last frame was sent.
     /// @return 'true' if there is new data.
     virtual bool DoesTimerHaveNewData() = 0;
+
+    /// @brief Returns the type of the object.
+    /// @return Type code of the object.
+    virtual object_type_t GetObjectType() = 0;
+
+    /// @brief Checks if the object is the system one.
+    /// @return 'true' if the object is the system one (not ordinary).
+    virtual bool IsObjectTypeSystem() = 0;
+
+    /// @brief Checks if the object is ordinary.
+    /// @return 'true' it the object is ordinary.
+    virtual bool IsObjectTypeOrdinary() = 0;
+
+    /// @brief Checks if the object type is unknown.
+    /// @return 'true' if the object type is unknown.
+    virtual bool IsObjectTypeUnknown() = 0;
 
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
@@ -166,8 +187,11 @@ public:
     ///                   Example #1: timer in the frame limit mode, period is 250 ms, data updates every 30 ms, frame will be sent every 250 ms.
     ///                   Example #2: timer in the frame limit mode, period is 250 ms, data updates every 800 ms, frame will be sent every 800 ms.
     ///                   Example #3: timer in the flood mode, period is 250 ms, data was updated once on boot, frame will be sent every 250 ms.
-    CANObject(can_object_id_t id, uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED, bool flood_mode = false)
-        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms), _flood_mode(flood_mode)
+    /// @param object_type The type of the object. By default, it is set to CAN_OBJECT_TYPE_ORDINARY, which means that the object isn't a system one.
+    CANObject(can_object_id_t id,
+              uint16_t timer_period_ms = CAN_TIMER_DISABLED, uint16_t error_period_ms = CAN_ERROR_DISABLED,
+              bool flood_mode = false, object_type_t object_type = CAN_OBJECT_TYPE_ORDINARY)
+        : _id(id), _timer_period(timer_period_ms), _error_period(error_period_ms), _flood_mode(flood_mode), _object_type(object_type)
     {
         ClearDataFields();
     };
@@ -310,6 +334,16 @@ public:
         return _request_handler;
     };
 
+    /// @brief Sets type of object.
+    /// @param object_type type of the object ot set.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetObjectType(object_type_t object_type) override
+    {
+        _object_type = object_type;
+
+        return *this;
+    };
+
     /// @brief Performs processing of CANObjects
     /// @param time Current time
     /// @param can_frame [OUT] CAN frame for storing the outgoing data
@@ -352,7 +386,7 @@ public:
         }
         else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != CAN_ERROR_DISABLED)
         {
-            // enclosed if fixes that: 
+            // enclosed if fixes that:
             // A bug or a feature found =)
             // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
             if (time - _last_event_time >= _error_period)
@@ -414,10 +448,6 @@ public:
                 error.error_code = ERROR_CODE_OBJECT_SET_FUNCTION_IS_MISSING;
                 error.function_id = CAN_FUNC_EVENT_ERROR;
             }
-            if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
-            {
-                error.function_id = CAN_FUNC_EVENT_ERROR;
-            }
             break;
 
         case CAN_FUNC_REQUEST_IN:
@@ -429,10 +459,10 @@ public:
             {
                 handler_result = _PrepareRequestCanFrame(can_frame, error);
             }
-            if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
-            {
-                error.function_id = CAN_FUNC_EVENT_ERROR;
-            }
+            break;
+        
+        case CAN_FUNC_SYSTEM_REQUEST_IN:
+            handler_result = _PrepareSystemRequestCanFrame(can_frame, error);
             break;
 
         default:
@@ -465,7 +495,7 @@ public:
     /// @param data [IN] Frame data to send in CAN frame
     /// @param data_length [IN] Frame data length
     /// @return The result of incoming can frame processing (should we send any CAN frames or not)
-    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0 ) override
+    virtual can_result_t FillRawCanFrame(can_frame_t &can_frame, can_error_t &error, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) override
     {
         return _PrepareRawCanFrame(can_frame, error, function_id, data, data_length);
     };
@@ -504,6 +534,35 @@ public:
     {
         return _has_new_data;
     };
+
+    /// @brief Returns the type of the object.
+    /// @return Type code of the object.
+    virtual object_type_t GetObjectType() override
+    {
+        return _object_type;
+    };
+
+    /// @brief Checks if the object is the system one.
+    /// @return 'true' if the object is the system one (not ordinary).
+    virtual bool IsObjectTypeSystem() override
+    {
+        return !IsObjectTypeOrdinary() && !IsObjectTypeUnknown();
+    };
+
+    /// @brief Checks if the object is ordinary.
+    /// @return 'true' it the object is ordinary.
+    virtual bool IsObjectTypeOrdinary() override
+    {
+        return GetObjectType() == CAN_OBJECT_TYPE_ORDINARY;
+    };
+
+    /// @brief Checks if the object type is unknown.
+    /// @return 'true' if the object type is unknown.
+    virtual bool IsObjectTypeUnknown() override
+    {
+        return GetObjectType() == CAN_OBJECT_TYPE_UNKNOWN;
+    };
+
 
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
@@ -586,9 +645,11 @@ private:
 
     uint16_t _timer_period = CAN_TIMER_DISABLED;
     uint16_t _error_period = CAN_ERROR_DISABLED;
-    
+
     bool _flood_mode = false;
     bool _has_new_data = false;
+
+    object_type_t _object_type = CAN_OBJECT_TYPE_UNKNOWN;
 
     event_handler_t _event_handler = nullptr;
     set_handler_t _set_handler = nullptr;
@@ -681,6 +742,24 @@ private:
         }
 
         return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_EVENT_OK, _data_fields, _item_count * sizeof(T));
+    }
+
+    /// @brief Fills CAN frame with system request specific data.
+    /// @param can_frame Incoming and outgoing CAN frame.
+    /// @param error An outgoing error structure. It will be filled by object if something went wrong.
+    /// @return The result of operation (should we send any CAN/Error frames or not)
+    can_result_t _PrepareSystemRequestCanFrame(can_frame_t &can_frame, can_error_t &error)
+    {
+        if (can_frame.raw_data_length != 1)
+        {
+            can_frame.initialized = false;
+            error.function_id = CAN_FUNC_EVENT_ERROR;
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA;
+            return CAN_RESULT_ERROR;
+        }
+
+        return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_SYSTEM_REQUEST_OUT_OK, &_object_type, sizeof(_object_type));
     }
 
     /// @brief Fills CAN frame with specified data
