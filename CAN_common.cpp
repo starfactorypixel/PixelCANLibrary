@@ -103,38 +103,43 @@ const char *get_function_name(can_function_id_t function_id)
         return "none";
 
     case CAN_FUNC_SET_IN:
-        return "set:in";
+        return "set: in";
+    
+    // CAN_FUNC_SET_OUT_OK — deleted
+    // CAN_FUNC_SET_OUT_ERR — deleted
 
     case CAN_FUNC_REQUEST_IN:
-        return "request:in";
+        return "request: in";
+    
+    // CAN_FUNC_REQUEST_OUT_OK — deleted
+    // CAN_FUNC_REQUEST_OUT_ERR — deleted
 
     case CAN_FUNC_TIMER_NORMAL:
-        return "timer:normal";
+        return "timer: normal";
 
     case CAN_FUNC_TIMER_WARNING:
-        return "timer:warning";
+        return "timer: warning";
 
     case CAN_FUNC_TIMER_CRITICAL:
-        return "timer:critical";
-
-    case CAN_FUNC_SYSTEM_TIMER_NORMAL:
-        return "system timer:normal";
-
-    case CAN_FUNC_SYSTEM_TIMER_WARNING:
-        return "system timer:warning";
-
-    case CAN_FUNC_SYSTEM_TIMER_CRITICAL:
-        return "system timer:critical";
+        return "timer: critical";
 
     case CAN_FUNC_EVENT_OK:
-        return "event:normal";
+        return "event: normal";
 
     case CAN_FUNC_EVENT_ERROR:
-        return "event:error";
+        return "event: error";
+
+    case CAN_FUNC_SYSTEM_REQUEST_IN:
+        return "system request: in";
+
+    case CAN_FUNC_SYSTEM_REQUEST_OUT_OK:
+        return "system request: ok answer";
 
     case CAN_FUNC_FIRST_OUT_OK:
     case CAN_FUNC_FIRST_OUT_UNUSED:
     case CAN_FUNC_FIRST_OUT_ERR:
+        return "correct other: some first value";
+
     case CAN_FUNC_SEND_RAW_INIT_IN:
     case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
     case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
@@ -149,7 +154,7 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_SEND_RAW_FINISH_IN:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
-        return "correct:other";
+        return "correct other: some send raw function";
 
     default:
         return "unknown";
