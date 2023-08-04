@@ -107,6 +107,16 @@ enum event_type_t : uint8_t
     CAN_EVENT_TYPE_MASK = 0b11110000,
 };
 
+enum object_type_t : uint8_t
+{
+    CAN_OBJECT_TYPE_UNKNOWN = 0x00,
+    CAN_OBJECT_TYPE_ORDINARY = 0x01,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO = 0x02,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH = 0x03,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES = 0x04,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR = 0x05,
+};
+
 enum error_section_t : uint8_t
 {
     ERROR_SECTION_NONE = 0x00,
@@ -180,6 +190,7 @@ void set_block_error_params(CANObjectInterface &block_sys_object);
 const char *get_function_name(can_function_id_t function_id);
 const char *get_timer_type_name(timer_type_t timer_type);
 const char *get_event_type_name(event_type_t event_type);
+const char *get_object_type_name(object_type_t object_type);
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code);
 
 #endif // CAN_COMMON_H

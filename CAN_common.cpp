@@ -221,6 +221,40 @@ const char *get_event_type_name(event_type_t event_type)
 #endif // DEBUG
 }
 
+/// @brief Debug logger function: decodes object type code to human-readable string.
+/// @param object_type Type of the object.
+/// @return Null-terminated string with name of the object type.
+const char *get_object_type_name(object_type_t object_type)
+{
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
+    switch (object_type)
+    {
+    case CAN_OBJECT_TYPE_UNKNOWN:
+        return "object type: unknown";
+
+    case CAN_OBJECT_TYPE_ORDINARY:
+        return "object type: ordinary object";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO:
+        return "object type: system object - BlockInfo";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH:
+        return "object type: system object - BlockHealth";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES:
+        return "object type: system object - BlockFeatures";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR:
+        return "object type: system object - BlockError";
+
+    default:
+        return "event type: unknown";
+    }
+#else  // DEBUG
+    return "detailed names are disabled";
+#endif // DEBUG
+}
+
 /// @brief Debug logger function: decodes error section & code to human-readable string.
 /// @param error_section Error section to decode.
 /// @param error_code Error code to decode.
