@@ -51,6 +51,10 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_EVENT_OK = 0x65,
     CAN_FUNC_EVENT_ERROR = 0xE6,
 
+    CAN_FUNC_SYSTEM_REQUEST_IN = 0x3A,
+    CAN_FUNC_SYSTEM_REQUEST_OUT_OK = 0x7A,
+    // CAN_FUNC_SYSTEM_REQUEST_OUT_ERR = not allowed, 0xFA
+
     // CAN_FUNC_FIRST_IN = 0x00, // == CAN_FUNC_NONE
     CAN_FUNC_FIRST_OUT_OK = 0x40,
     CAN_FUNC_FIRST_OUT_UNUSED = 0x80,
@@ -103,6 +107,16 @@ enum event_type_t : uint8_t
     CAN_EVENT_TYPE_MASK = 0b11110000,
 };
 
+enum object_type_t : uint8_t
+{
+    CAN_OBJECT_TYPE_UNKNOWN = 0x00,
+    CAN_OBJECT_TYPE_ORDINARY = 0x01,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO = 0x02,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH = 0x03,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES = 0x04,
+    CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR = 0x05,
+};
+
 enum error_section_t : uint8_t
 {
     ERROR_SECTION_NONE = 0x00,
@@ -121,6 +135,7 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW = 0x06,
     ERROR_CODE_OBJECT_HAVE_NO_DATA = 0x07,
     ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH = 0x08,
+    ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA = 0x09,
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
@@ -157,6 +172,17 @@ using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &
 using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 
 /*************************************************************************************************
+ * 
+ * Common helper functions
+ * 
+ *************************************************************************************************/
+class CANObjectInterface;
+void set_block_info_params(CANObjectInterface &block_sys_object);
+void set_block_health_params(CANObjectInterface &block_sys_object);
+void set_block_features_params(CANObjectInterface &block_sys_object);
+void set_block_error_params(CANObjectInterface &block_sys_object);
+
+/*************************************************************************************************
  *
  * Logger related functions.
  * All of them are disabled without DEBUG definition.
@@ -165,8 +191,7 @@ using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &erro
 const char *get_function_name(can_function_id_t function_id);
 const char *get_timer_type_name(timer_type_t timer_type);
 const char *get_event_type_name(event_type_t event_type);
+const char *get_object_type_name(object_type_t object_type);
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code);
-// void log_can_frame(can_frame_t &can_frame);
-// void log_can_frame(can_object_id_t id, uint8_t *data, uint8_t length);
 
 #endif // CAN_COMMON_H

@@ -1,5 +1,6 @@
 #include <string.h>
 #include "CAN_common.h"
+#include "CANObject.h"
 
 /// @brief Clears all attributes of CAN frame
 /// @param can_frame CAN frame to clear
@@ -20,6 +21,80 @@ void clear_can_error_struct(can_error_t &error)
     error.error_code = 0;
 }
 
+/// @brief Common BlockInfo parameters will be applied to the specified CANObject.
+///        All BlockInfo objects has:
+///          - enabled timers (15000 ms period)
+///          - enabled flood mode
+///          - disabled events
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_info_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(true);
+    block_sys_object.SetTimerPeriod(15000);
+    block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+}
+
+/// @brief Common BlockHealth parameters will be applied to the specified CANObject.
+///        All BlockHealth objects has:
+///          - disabled timers and flood mode
+///          - enabled events (300 ms period)
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_health_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(false);
+    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
+
+/// @brief Common BlockFeatures parameters will be applied to the specified CANObject.
+///        All BlockFeatures objects has:
+///          - enabled timers (15000 ms period)
+///          - enabled flood mode
+///          - disabled events
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_features_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(true);
+    block_sys_object.SetTimerPeriod(15000);
+    block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
+
+/// @brief Common BlockError parameters will be applied to the specified CANObject.
+///        All BlockError objects has:
+///          - disabled timers and flood mode
+///          - enabled events (300 ms period)
+///          - no external handlers for events, timers, set & request commends
+/// @param block_sys_object Target CANObject
+void set_block_error_params(CANObjectInterface &block_sys_object)
+{
+    block_sys_object.SetTimerFloodMode(false);
+    block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
+    block_sys_object.SetErrorEventDelay(300);
+    block_sys_object.SetObjectType(CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR);
+    block_sys_object.RegisterFunctionEvent(nullptr);
+    block_sys_object.RegisterFunctionRequest(nullptr);
+    block_sys_object.RegisterFunctionSet(nullptr);
+    block_sys_object.RegisterFunctionTimer(nullptr);
+};
+
 /// @brief Debug logger function: decodes function ID to to human-readable string.
 /// @param function_id ID of the function.
 /// @return Null-terminated string with name of the function
@@ -32,29 +107,43 @@ const char *get_function_name(can_function_id_t function_id)
         return "none";
 
     case CAN_FUNC_SET_IN:
-        return "set:in";
+        return "set: in";
+    
+    // CAN_FUNC_SET_OUT_OK — deleted
+    // CAN_FUNC_SET_OUT_ERR — deleted
 
     case CAN_FUNC_REQUEST_IN:
-        return "request:in";
+        return "request: in";
+    
+    // CAN_FUNC_REQUEST_OUT_OK — deleted
+    // CAN_FUNC_REQUEST_OUT_ERR — deleted
 
     case CAN_FUNC_TIMER_NORMAL:
-        return "timer:normal";
+        return "timer: normal";
 
     case CAN_FUNC_TIMER_WARNING:
-        return "timer:warning";
+        return "timer: warning";
 
     case CAN_FUNC_TIMER_CRITICAL:
-        return "timer:critical";
+        return "timer: critical";
 
     case CAN_FUNC_EVENT_OK:
-        return "event:normal";
+        return "event: normal";
 
     case CAN_FUNC_EVENT_ERROR:
-        return "event:error";
+        return "event: error";
+
+    case CAN_FUNC_SYSTEM_REQUEST_IN:
+        return "system request: in";
+
+    case CAN_FUNC_SYSTEM_REQUEST_OUT_OK:
+        return "system request: ok answer";
 
     case CAN_FUNC_FIRST_OUT_OK:
     case CAN_FUNC_FIRST_OUT_UNUSED:
     case CAN_FUNC_FIRST_OUT_ERR:
+        return "correct other: some first value";
+
     case CAN_FUNC_SEND_RAW_INIT_IN:
     case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
     case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
@@ -69,6 +158,8 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_SEND_RAW_FINISH_IN:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
     case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
+        return "correct other: some send raw function";
+
     default:
         return "unknown";
     }
@@ -126,6 +217,40 @@ const char *get_event_type_name(event_type_t event_type)
 
     case CAN_EVENT_TYPE_MASK:
         return "event type: mask";
+    default:
+        return "event type: unknown";
+    }
+#else  // DEBUG
+    return "detailed names are disabled";
+#endif // DEBUG
+}
+
+/// @brief Debug logger function: decodes object type code to human-readable string.
+/// @param object_type Type of the object.
+/// @return Null-terminated string with name of the object type.
+const char *get_object_type_name(object_type_t object_type)
+{
+#if defined(DEBUG) || defined(DETAILED_DEBUG)
+    switch (object_type)
+    {
+    case CAN_OBJECT_TYPE_UNKNOWN:
+        return "object type: unknown";
+
+    case CAN_OBJECT_TYPE_ORDINARY:
+        return "object type: ordinary object";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO:
+        return "object type: system object - BlockInfo";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH:
+        return "object type: system object - BlockHealth";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES:
+        return "object type: system object - BlockFeatures";
+
+    case CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR:
+        return "object type: system object - BlockError";
+
     default:
         return "event type: unknown";
     }
@@ -192,6 +317,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH:
             return "error: section [CANObject], code [incorrect data length]";
+
+        case ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA:
+            return "error: section [CANObject], code [system request should not have any frame data]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";
