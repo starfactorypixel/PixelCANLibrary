@@ -85,7 +85,7 @@ public:
     /// @param toggle_handler Pointer to the toggle command handler.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &RegisterFunctionToggle(toggle_handler_t toggle_handler) = 0;
-    
+
     /// @brief Checks whether the external toggle function handler is set.
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionToggle() = 0;
@@ -212,6 +212,34 @@ public:
     {
         memset(_data_fields, 0, _item_count * sizeof(T));
         memset(_states_of_data_fields, 0, _item_count * sizeof(T));
+    }
+
+    /// @brief Timer type checker with upper limits 
+    /// @param value Current object value
+    /// @param max_norm Upper limit of the normal value range
+    /// @param max_warn Upper limit of the warning value range
+    /// @return Type of the timer for specified value
+    static inline timer_type_t TernaryExDown(T value, T max_norm, T max_warn)
+    {
+        if (value <= max_norm)
+            return CAN_TIMER_TYPE_NORMAL;
+        if (value <= max_warn)
+            return CAN_TIMER_TYPE_WARNING;
+        return CAN_TIMER_TYPE_CRITICAL;
+    }
+
+    /// @brief Timer type checker with lower limits 
+    /// @param value Current object value
+    /// @param min_norm Lower limit of the normal value range
+    /// @param min_warn Lower limit of the warning value range
+    /// @return Type of the timer for specified value
+    static inline timer_type_t TernaryExUp(T value, T min_norm, T min_warn)
+    {
+        if (value >= min_norm)
+            return CAN_TIMER_TYPE_NORMAL;
+        if (value >= min_warn)
+            return CAN_TIMER_TYPE_WARNING;
+        return CAN_TIMER_TYPE_CRITICAL;
     }
 
     /// @brief Registers an external handler for events. It will be called when event occurs.
@@ -352,7 +380,7 @@ public:
 
         return *this;
     };
-    
+
     /// @brief Checks whether the external toggle function handler is set.
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionToggle() override
@@ -475,7 +503,7 @@ public:
                 error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
-        
+
         case CAN_FUNC_TOGGLE_IN:
             if (HasExternalFunctionToggle())
             {
@@ -512,7 +540,7 @@ public:
                 handler_result = _PrepareRequestCanFrame(can_frame, error);
             }
             break;
-        
+
         case CAN_FUNC_SYSTEM_REQUEST_IN:
             handler_result = _PrepareSystemRequestCanFrame(can_frame, error);
             break;
@@ -614,7 +642,6 @@ public:
     {
         return GetObjectType() == CAN_OBJECT_TYPE_UNKNOWN;
     };
-
 
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
