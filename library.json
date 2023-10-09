@@ -1,7 +1,7 @@
 {
   "name": "PixelCANLibrary",
   "description": "CAN-based framework for the Pixel (solar-powered car open project)",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "repository":
   {
       "type": "git",

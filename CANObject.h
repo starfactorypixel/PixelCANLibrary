@@ -173,7 +173,7 @@ public:
     /// @brief Universal getter for CANObject's data fields
     /// @param index Index of data field to get value from. If the index is out of range, nullpointer will be returned.
     /// @return Pointer to the data field value. If the index is out of range, nullpointer will be returned.
-    virtual void *GetValue(uint8_t index) = 0;
+    virtual void *GetValuePtr(uint8_t index) = 0;
 };
 
 /******************************************************************************************
@@ -665,7 +665,7 @@ public:
     /// @brief Universal getter for CANObject's data fields
     /// @param index Index of data field to get value from. If the index is out of range, nullpointer will be returned.
     /// @return Pointer to the data field value. If the index is out of range, nullpointer will be returned.
-    virtual void *GetValue(uint8_t index) override
+    virtual void *GetValuePtr(uint8_t index) override
     {
         if (index >= _item_count)
             return nullptr;
@@ -673,10 +673,10 @@ public:
         return (void *)&_data_fields[index];
     };
 
-    /// @brief The variation of GetValue() method, which returns typed value.
+    /// @brief The variation of GetValuePtr() method, which returns typed value.
     /// @param index Index of data field to get value from.
     /// @return The value of the specified data field. If the index is out of range, zero value will be returned.
-    T GetTypedValue(uint8_t index)
+    T GetValue(uint8_t index)
     {
         if (index >= _item_count)
             return (T)0;
