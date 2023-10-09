@@ -17,12 +17,8 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_NONE = 0x00,
 
     CAN_FUNC_SET_IN = 0x01,
-    // CAN_FUNC_SET_OUT_OK = 0x41,  // deleted 17.05.2023
-    // CAN_FUNC_SET_OUT_ERR = 0xC1, // deleted 17.05.2023
-
+    CAN_FUNC_TOGGLE_IN = 0x02,
     CAN_FUNC_REQUEST_IN = 0x11,
-    // CAN_FUNC_REQUEST_OUT_OK = 0x51,  // deleted 17.05.2023
-    // CAN_FUNC_REQUEST_OUT_ERR = 0xD1, // deleted 17.05.s2023
 
     CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
     CAN_FUNC_SEND_RAW_INIT_OUT_OK = 0x70,
@@ -136,6 +132,8 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_HAVE_NO_DATA = 0x07,
     ERROR_CODE_OBJECT_INCORRECT_DATA_LENGTH = 0x08,
     ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA = 0x09,
+    ERROR_CODE_OBJECT_TOGGLE_FUNCTION_IS_MISSING = 0x0A,
+    ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA = 0x0B,
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
@@ -170,6 +168,7 @@ using event_handler_t = can_result_t (*)(can_frame_t &can_frame, event_type_t ev
 using timer_handler_t = can_result_t (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
 using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
+using toggle_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 
 /*************************************************************************************************
  * 

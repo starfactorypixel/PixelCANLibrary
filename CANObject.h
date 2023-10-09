@@ -81,6 +81,15 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionRequest() = 0;
 
+    /// @brief Registers an external handler for toggle commands. It will be called when toggle command comes.
+    /// @param toggle_handler Pointer to the toggle command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionToggle(toggle_handler_t toggle_handler) = 0;
+    
+    /// @brief Checks whether the external toggle function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionToggle() = 0;
+
     /// @brief Sets type of object.
     /// @param object_type type of the object ot set.
     /// @return CANObjectInterface reference
@@ -331,7 +340,24 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionRequest() override
     {
-        return _request_handler;
+        return _request_handler != nullptr;
+    };
+
+    /// @brief Registers an external handler for toggle commands. It will be called when toggle command comes.
+    /// @param toggle_handler Pointer to the toggle command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionToggle(toggle_handler_t toggle_handler) override
+    {
+        _toggle_handler = toggle_handler;
+
+        return *this;
+    };
+    
+    /// @brief Checks whether the external toggle function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionToggle() override
+    {
+        return _toggle_handler != nullptr;
     };
 
     /// @brief Sets type of object.
@@ -368,7 +394,7 @@ public:
         if (max_event_type == CAN_EVENT_TYPE_NORMAL)
         {
             // CAN_EVENT_TYPE_NORMAL should be sent immediately, we don't need to check the time
-            if (_event_handler != nullptr)
+            if (HasExternalFunctionEvent())
             {
                 handler_result = _event_handler(can_frame, max_event_type, error);
             }
@@ -391,7 +417,7 @@ public:
             // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
             if (time - _last_event_time >= _error_period)
             {
-                if (_event_handler != nullptr)
+                if (HasExternalFunctionEvent())
                 {
                     handler_result = _event_handler(can_frame, max_event_type, error);
                 }
@@ -406,7 +432,7 @@ public:
         {
             if (DoesTimerHaveNewData() || IsTimerInFloodMode())
             {
-                if (_timer_handler != nullptr)
+                if (HasExternalFunctionTimer())
                 {
                     handler_result = _timer_handler(can_frame, max_timer_type, error);
                 }
@@ -436,7 +462,7 @@ public:
         switch (can_frame.function_id)
         {
         case CAN_FUNC_SET_IN:
-            if (_set_handler != nullptr)
+            if (HasExternalFunctionSet())
             {
                 handler_result = _set_handler(can_frame, error);
             }
@@ -449,9 +475,35 @@ public:
                 error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
+        
+        case CAN_FUNC_TOGGLE_IN:
+            if (HasExternalFunctionToggle())
+            {
+                if (can_frame.raw_data_length == 1)
+                {
+                    handler_result = _toggle_handler(can_frame, error);
+                }
+                else
+                {
+                    handler_result = CAN_RESULT_ERROR;
+                    can_frame.initialized = false;
+                    error.error_section = ERROR_SECTION_CAN_OBJECT;
+                    error.error_code = ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA;
+                    error.function_id = CAN_FUNC_EVENT_ERROR;
+                }
+            }
+            else
+            {
+                handler_result = CAN_RESULT_ERROR;
+                can_frame.initialized = false;
+                error.error_section = ERROR_SECTION_CAN_OBJECT;
+                error.error_code = ERROR_CODE_OBJECT_TOGGLE_FUNCTION_IS_MISSING;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            break;
 
         case CAN_FUNC_REQUEST_IN:
-            if (_request_handler != nullptr)
+            if (HasExternalFunctionRequest())
             {
                 handler_result = _request_handler(can_frame, error);
             }
@@ -655,6 +707,7 @@ private:
     set_handler_t _set_handler = nullptr;
     timer_handler_t _timer_handler = nullptr;
     request_handler_t _request_handler = nullptr;
+    toggle_handler_t _toggle_handler = nullptr;
 
     /// @brief Fills CAN frame with event specific data
     /// @param event_type Type of the event
