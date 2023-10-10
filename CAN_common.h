@@ -18,6 +18,8 @@ enum can_function_id_t : uint8_t
 
     CAN_FUNC_SET_IN = 0x01,
     CAN_FUNC_TOGGLE_IN = 0x02,
+    CAN_FUNC_ACTION_IN = 0x03,
+
     CAN_FUNC_REQUEST_IN = 0x11,
 
     CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
@@ -134,6 +136,8 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA = 0x09,
     ERROR_CODE_OBJECT_TOGGLE_FUNCTION_IS_MISSING = 0x0A,
     ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA = 0x0B,
+    ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING = 0x0C,
+    ERROR_CODE_OBJECT_ACTION_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA = 0x0D,
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
@@ -169,6 +173,7 @@ using timer_handler_t = can_result_t (*)(can_frame_t &can_frame, timer_type_t ti
 using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using toggle_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
+using action_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 
 /*************************************************************************************************
  * 

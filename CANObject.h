@@ -90,6 +90,15 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionToggle() = 0;
 
+    /// @brief Registers an external handler for action commands. It will be called when action command comes.
+    /// @param action_handler Pointer to the action command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionAction(action_handler_t action_handler) = 0;
+
+    /// @brief Checks whether the external action function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionAction() = 0;
+
     /// @brief Sets type of object.
     /// @param object_type type of the object ot set.
     /// @return CANObjectInterface reference
@@ -388,6 +397,24 @@ public:
         return _toggle_handler != nullptr;
     };
 
+    /// @brief Registers an external handler for action commands. It will be called when action command comes.
+    /// @param action_handler Pointer to the action command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionAction(action_handler_t action_handler) override
+    {
+        _action_handler = action_handler;
+
+        return *this;
+    };
+
+    /// @brief Checks whether the external action function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionAction() override
+    {
+        return _action_handler != nullptr;
+    };
+
+
     /// @brief Sets type of object.
     /// @param object_type type of the object ot set.
     /// @return CANObjectInterface reference
@@ -526,6 +553,32 @@ public:
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_TOGGLE_FUNCTION_IS_MISSING;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            break;
+        
+        case CAN_FUNC_ACTION_IN:
+            if (HasExternalFunctionAction())
+            {
+                if (can_frame.raw_data_length == 1)
+                {
+                    handler_result = _action_handler(can_frame, error);
+                }
+                else
+                {
+                    handler_result = CAN_RESULT_ERROR;
+                    can_frame.initialized = false;
+                    error.error_section = ERROR_SECTION_CAN_OBJECT;
+                    error.error_code = ERROR_CODE_OBJECT_ACTION_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA;
+                    error.function_id = CAN_FUNC_EVENT_ERROR;
+                }
+            }
+            else
+            {
+                handler_result = CAN_RESULT_ERROR;
+                can_frame.initialized = false;
+                error.error_section = ERROR_SECTION_CAN_OBJECT;
+                error.error_code = ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING;
                 error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
@@ -735,6 +788,7 @@ private:
     timer_handler_t _timer_handler = nullptr;
     request_handler_t _request_handler = nullptr;
     toggle_handler_t _toggle_handler = nullptr;
+    action_handler_t _action_handler = nullptr;
 
     /// @brief Fills CAN frame with event specific data
     /// @param event_type Type of the event

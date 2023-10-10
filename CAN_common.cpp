@@ -111,6 +111,9 @@ const char *get_function_name(can_function_id_t function_id)
     
     case CAN_FUNC_TOGGLE_IN:
         return "toggle: in";
+    
+    case CAN_FUNC_ACTION_IN:
+        return "action: in";
 
     case CAN_FUNC_REQUEST_IN:
         return "request: in";
@@ -323,6 +326,12 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
         
         case ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA:
             return "error: section [CANObject], code [toggle command frame should not have any frame data]";
+
+        case ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING:
+            return "error: section [CANObject], code [external action handler is missing]";
+
+        case ERROR_CODE_OBJECT_ACTION_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA:
+            return "error: section [CANObject], code [action command frame should not have any frame data]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";
