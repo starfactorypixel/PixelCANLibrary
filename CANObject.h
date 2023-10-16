@@ -72,6 +72,15 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionTimer() = 0;
 
+    /// @brief Registers an external handler for lock commands. It will be called when lock command comes.
+    /// @param lock_handler Pointer to the lock command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionLock(lock_handler_t lock_handler) = 0;
+
+    /// @brief Checks whether the external lock function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionLock() = 0;
+
     /// @brief Registers an external handler for request commands. It will be called when request command comes.
     /// @param request_handler Pointer to the request command handler.
     /// @return CANObjectInterface reference
@@ -162,6 +171,10 @@ public:
     /// @return 'true' if the object type is unknown.
     virtual bool IsObjectTypeUnknown() = 0;
 
+    /// @brief Returns the current lock level of the object.
+    /// @return Lock level code of the object.
+    virtual lock_func_level_t GetLockLevel() = 0;
+
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
     virtual uint8_t GetDataFieldCount() = 0;
@@ -223,7 +236,7 @@ public:
         memset(_states_of_data_fields, 0, _item_count * sizeof(T));
     }
 
-    /// @brief Timer type checker with upper limits 
+    /// @brief Timer type checker with upper limits
     /// @param value Current object value
     /// @param max_norm Upper limit of the normal value range
     /// @param max_warn Upper limit of the warning value range
@@ -237,7 +250,7 @@ public:
         return CAN_TIMER_TYPE_CRITICAL;
     }
 
-    /// @brief Timer type checker with lower limits 
+    /// @brief Timer type checker with lower limits
     /// @param value Current object value
     /// @param min_norm Lower limit of the normal value range
     /// @param min_warn Lower limit of the warning value range
@@ -363,6 +376,23 @@ public:
         return _timer_handler != nullptr;
     };
 
+    /// @brief Registers an external handler for lock commands. It will be called when lock command comes.
+    /// @param lock_handler Pointer to the lock command handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionLock(lock_handler_t lock_handler) override
+    {
+        _lock_handler = lock_handler;
+
+        return *this;
+    };
+
+    /// @brief Checks whether the external lock function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionLock() override
+    {
+        return _lock_handler != nullptr;
+    };
+
     /// @brief Registers an external handler for request commands. It will be called when request command comes.
     /// @param request_handler Pointer to the request command handler.
     /// @return CANObjectInterface reference
@@ -413,7 +443,6 @@ public:
     {
         return _action_handler != nullptr;
     };
-
 
     /// @brief Sets type of object.
     /// @param object_type type of the object ot set.
@@ -510,7 +539,21 @@ public:
     virtual can_result_t InputCanFrame(can_frame_t &can_frame, can_error_t &error) override
     {
         if (!can_frame.initialized)
+        {
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME;
+            error.function_id = CAN_FUNC_EVENT_ERROR;
             return CAN_RESULT_ERROR;
+        }
+
+        if (_IsLockedForFunction(can_frame.function_id))
+        {
+            can_frame.initialized = false;
+            error.error_section = ERROR_SECTION_CAN_OBJECT;
+            error.error_code = ERROR_CODE_OBJECT_LOCKED;
+            error.function_id = CAN_FUNC_EVENT_ERROR;
+            return CAN_RESULT_ERROR;
+        }
 
         can_result_t handler_result = CAN_RESULT_ERROR;
 
@@ -556,7 +599,7 @@ public:
                 error.function_id = CAN_FUNC_EVENT_ERROR;
             }
             break;
-        
+
         case CAN_FUNC_ACTION_IN:
             if (HasExternalFunctionAction())
             {
@@ -580,6 +623,44 @@ public:
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING;
                 error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            break;
+
+        case CAN_FUNC_LOCK_IN:
+            if (can_frame.raw_data_length != 2)
+            {
+                handler_result = CAN_RESULT_ERROR;
+                can_frame.initialized = false;
+                error.error_section = ERROR_SECTION_CAN_OBJECT;
+                error.error_code = ERROR_CODE_OBJECT_LOCK_COMMAND_FRAME_DATA_LENGTH_ERROR;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            else if (!_IsItKnownLockLevel((lock_func_level_t)can_frame.data[0]))
+            {
+                handler_result = CAN_RESULT_ERROR;
+                can_frame.initialized = false;
+                error.error_section = ERROR_SECTION_CAN_OBJECT;
+                error.error_code = ERROR_CODE_OBJECT_LOCK_LEVEL_IS_UNKNOWN;
+                error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            else
+            {
+                // save lock level because can frame may be rewrited by handler
+                lock_func_level_t specified_lock_level = (lock_func_level_t)can_frame.data[0];
+                if (HasExternalFunctionLock())
+                {
+                    handler_result = _lock_handler(can_frame, error);
+                }
+                else
+                {
+                    handler_result = _PrepareRawCanFrame(can_frame, error, CAN_FUNC_EVENT_OK);
+                }
+
+                // if handler was successful then we need to save specified lock level
+                if (handler_result == CAN_RESULT_CAN_FRAME)
+                {
+                    _lock_level = specified_lock_level;
+                }
             }
             break;
 
@@ -696,6 +777,13 @@ public:
         return GetObjectType() == CAN_OBJECT_TYPE_UNKNOWN;
     };
 
+    /// @brief Returns the current lock level of the object.
+    /// @return Lock level code of the object.
+    virtual lock_func_level_t GetLockLevel() override
+    {
+        return _lock_level;
+    };
+
     /// @brief Returns number of data fields in the CANObject
     /// @return Returns number of data fields in the CANObject
     virtual uint8_t GetDataFieldCount() override
@@ -782,13 +870,54 @@ private:
     bool _has_new_data = false;
 
     object_type_t _object_type = CAN_OBJECT_TYPE_UNKNOWN;
+    lock_func_level_t _lock_level = CAN_LOCK_LEVEL_UNLOCKED;
 
     event_handler_t _event_handler = nullptr;
     set_handler_t _set_handler = nullptr;
     timer_handler_t _timer_handler = nullptr;
+    lock_handler_t _lock_handler = nullptr;
     request_handler_t _request_handler = nullptr;
     toggle_handler_t _toggle_handler = nullptr;
     action_handler_t _action_handler = nullptr;
+
+    /// @brief Check if specified lock level is known
+    /// @param lock_code The lock level to check
+    /// @return 'true' if lock level is known; 'false' if not
+    static bool _IsItKnownLockLevel(const lock_func_level_t lock_level)
+    {
+        return (lock_level == CAN_LOCK_LEVEL_UNLOCKED ||
+                lock_level == CAN_LOCK_LEVEL_PARTIAL_LOCK ||
+                lock_level == CAN_LOCK_LEVEL_TOTAL_LOCK);
+    }
+
+    /// @brief Checks if this function can be performed with the current lock level
+    /// @param func_id Function ID to check with
+    /// @return 'true' if the function can be performed; 'false' if not
+    bool _IsLockedForFunction(const can_function_id_t func_id)
+    {
+        // CAN_FUNC_LOCK_IN & CAN_FUNC_SYSTEM_REQUEST_IN should always work
+        if (func_id == CAN_FUNC_LOCK_IN || func_id == CAN_FUNC_SYSTEM_REQUEST_IN)
+            return false;
+        
+        bool result = true;
+
+        switch (_lock_level)
+        {
+        case CAN_LOCK_LEVEL_UNLOCKED:
+            result = false;
+            break;
+
+        case CAN_LOCK_LEVEL_PARTIAL_LOCK:
+            result = result && (func_id != CAN_FUNC_REQUEST_IN);
+            break;
+
+        case CAN_LOCK_LEVEL_TOTAL_LOCK:
+        default:
+            break;
+        }
+
+        return result;
+    }
 
     /// @brief Fills CAN frame with event specific data
     /// @param event_type Type of the event

@@ -12,6 +12,17 @@ void clear_can_frame_struct(can_frame_t &can_frame)
     can_frame.initialized = false;
 }
 
+/// @brief Copies data from one CAN frame to another
+/// @param dest_can_frame Destination CAN frame
+/// @param src_can_frame Source CAN frame
+void copy_can_frame_struct(can_frame_t &dest_can_frame, can_frame_t src_can_frame)
+{
+    memcpy(dest_can_frame.raw_data, src_can_frame.raw_data, sizeof(dest_can_frame.raw_data));
+    dest_can_frame.initialized = src_can_frame.initialized;
+    dest_can_frame.object_id = src_can_frame.object_id;
+    dest_can_frame.raw_data_length = src_can_frame.raw_data_length;
+}
+
 /// @brief Clears all attributes of CAN error structure
 /// @param error CAN error to clear
 void clear_can_error_struct(can_error_t &error)
@@ -108,16 +119,19 @@ const char *get_function_name(can_function_id_t function_id)
 
     case CAN_FUNC_SET_IN:
         return "set: in";
-    
+
     case CAN_FUNC_TOGGLE_IN:
         return "toggle: in";
-    
+
     case CAN_FUNC_ACTION_IN:
         return "action: in";
 
+    case CAN_FUNC_LOCK_IN:
+        return "lock: in";
+
     case CAN_FUNC_REQUEST_IN:
         return "request: in";
-    
+
     case CAN_FUNC_TIMER_NORMAL:
         return "timer: normal";
 
@@ -128,7 +142,7 @@ const char *get_function_name(can_function_id_t function_id)
         return "timer: critical";
 
     case CAN_FUNC_EVENT_OK:
-        return "event: normal";
+        return "event: ok";
 
     case CAN_FUNC_EVENT_ERROR:
         return "event: error";
@@ -279,7 +293,7 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK:
             return "error: section [CANManager], code [CAN frame and error structure are both blank after handlers]";
-       
+
         case ERROR_CODE_MANAGER_SOMETHING_WRONG:
             return "error: section [CANManager], code [something went wrong]";
 
@@ -320,10 +334,10 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_SYSTEM_REQUEST_SHOULD_NOT_HAVE_DATA:
             return "error: section [CANObject], code [system request should not have any frame data]";
-        
+
         case ERROR_CODE_OBJECT_TOGGLE_FUNCTION_IS_MISSING:
             return "error: section [CANObject], code [external toggle handler is missing]";
-        
+
         case ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA:
             return "error: section [CANObject], code [toggle command frame should not have any frame data]";
 
@@ -332,6 +346,18 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_ACTION_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA:
             return "error: section [CANObject], code [action command frame should not have any frame data]";
+
+        case ERROR_CODE_OBJECT_LOCK_COMMAND_FRAME_DATA_LENGTH_ERROR:
+            return "error: section [CANObject], code [lock command frame data length error]";
+
+        case ERROR_CODE_OBJECT_LOCK_LEVEL_IS_UNKNOWN:
+            return "error: section [CANObject], code [unknown lock level]";
+
+        case ERROR_CODE_OBJECT_LOCKED:
+            return "error: section [CANObject], code [object locked for this function]";
+
+        case ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME:
+            return "error: section [CANObject], code [incoming CAN frame not initialized]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";

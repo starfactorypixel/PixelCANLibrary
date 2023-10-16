@@ -19,6 +19,25 @@ public:
     /// @return 'true' if registration was successful, 'false' if not
     virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
 
+    /// @brief Returns the number of CANObjects, which are registered in CANManager
+    /// @return The number of CANObjects, which are registered in CANManager
+    virtual uint8_t GetObjectsCount() = 0;
+
+    /// @brief Checks if CANObject is registered in CANManager
+    /// @param id ID of the CANObject to check
+    /// @return Return 'true' if the CANObject is registered, 'false' if it is not
+    virtual bool HasCanObject(can_object_id_t id) = 0;
+
+    /// @brief Searches for the CANObject among the registered ones
+    /// @param id ID of the CANObject to search
+    /// @return 'pointer to CANObjectInterface' if this object is registered,
+    ///         'nullptr' if CANObject was not found.
+    virtual CANObjectInterface *GetCanObject(can_object_id_t id) = 0;
+
+    /// @brief Returns The number of CAN frames stored in the buffer.
+    /// @return The number of CAN frames stored in the buffer.
+    virtual uint8_t GetNumOfFramesInBuffer() = 0;
+
     /// @brief Registers low level function, that sends data via CAN bus
     /// @param can_send_func Pointer to the function
     virtual void RegisterSendFunction(can_send_function_t can_send_func) = 0;
@@ -73,7 +92,7 @@ public:
 
     /// @brief Returns the number of CANObjects, which are registered in CANManager
     /// @return The number of CANObjects, which are registered in CANManager
-    uint8_t GetObjectsCount()
+    virtual uint8_t GetObjectsCount() override
     {
         return _objects_idx;
     }
@@ -81,7 +100,7 @@ public:
     /// @brief Checks if CANObject is registered in CANManager
     /// @param id ID of the CANObject to check
     /// @return Return 'true' if the CANObject is registered, 'false' if it is not
-    bool HasCanObject(can_object_id_t id)
+    virtual bool HasCanObject(can_object_id_t id) override
     {
         return GetCanObject(id) != nullptr;
     }
@@ -90,7 +109,7 @@ public:
     /// @param id ID of the CANObject to search
     /// @return 'pointer to CANObjectInterface' if this object is registered,
     ///         'nullptr' if CANObject was not found.
-    CANObjectInterface *GetCanObject(can_object_id_t id)
+    virtual CANObjectInterface *GetCanObject(can_object_id_t id) override
     {
         for (uint8_t i = 0; i < _objects_idx; i++)
         {
@@ -102,7 +121,7 @@ public:
 
     /// @brief Returns The number of CAN frames stored in the buffer.
     /// @return The number of CAN frames stored in the buffer.
-    uint8_t GetNumOfFramesInBuffer()
+    virtual uint8_t GetNumOfFramesInBuffer() override
     {
         return _frame_buffer_index;
     }
@@ -132,15 +151,44 @@ public:
             CANObjectInterface *can_object = nullptr;
             for (uint8_t i = 0; i < _frame_buffer_index; i++)
             {
-                can_object = GetCanObject(_can_frame_buffer[i].object_id);
-                if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], _tx_error))
+                // transfer broadcast frames to all registered CAN-Objects
+                if (_can_frame_buffer[i].object_id == CAN_SYSTEM_ID_BROADCAST)
                 {
-                    _can_frame_buffer[i].initialized = false;
-                    continue;
-                }
+                    //  broadcast of "request", "system request" and "lock" functions only are allowed
+                    if (_can_frame_buffer[i].function_id != CAN_FUNC_REQUEST_IN &&
+                        _can_frame_buffer[i].function_id != CAN_FUNC_SYSTEM_REQUEST_IN &&
+                        _can_frame_buffer[i].function_id != CAN_FUNC_LOCK_IN)
+                    {
+                        _can_frame_buffer[i].initialized = false;
+                        continue;
+                    }
 
-                _ValidateAndFillErrorCanFrame(_can_frame_buffer[i], _tx_error);
-                _SendCanData(_can_frame_buffer[i]);
+                    can_frame_t broadcast_can_frame;
+                    for (uint8_t obj_idx = 0; obj_idx < _objects_idx; ++obj_idx)
+                    {
+                        clear_can_frame_struct(broadcast_can_frame);
+                        copy_can_frame_struct(broadcast_can_frame, _can_frame_buffer[i]);
+                        if (CAN_RESULT_IGNORE == _objects[obj_idx]->InputCanFrame(broadcast_can_frame, _tx_error))
+                            continue;
+
+                        _ValidateAndFillErrorCanFrame(broadcast_can_frame, _tx_error);
+                        broadcast_can_frame.object_id = _objects[obj_idx]->GetId();
+                        _SendCanData(broadcast_can_frame);
+                    }
+                }
+                // process all frames for specific CAN-Objects
+                else
+                {
+                    can_object = GetCanObject(_can_frame_buffer[i].object_id);
+                    if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], _tx_error))
+                    {
+                        _can_frame_buffer[i].initialized = false;
+                        continue;
+                    }
+
+                    _ValidateAndFillErrorCanFrame(_can_frame_buffer[i], _tx_error);
+                    _SendCanData(_can_frame_buffer[i]);
+                }
                 _can_frame_buffer[i].initialized = false;
             }
             // buffer is clear, we can write frame in the first item of buffer
@@ -173,7 +221,8 @@ public:
     /// @return true if data length exceeds 0 and a CANObject with the ID is registered, false if not
     virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) override
     {
-        if (length == 0 || !HasCanObject(id))
+        if (data == nullptr || length == 0 ||
+            (!HasCanObject(id) && id != CAN_SYSTEM_ID_BROADCAST))
             return false;
 
         _can_frame_buffer[_frame_buffer_index].object_id = id;
@@ -275,7 +324,7 @@ private:
     {
         if (can_frame.initialized)
             return; // CAN frame is specified, it's ok
-        
+
         if (error.error_section == ERROR_SECTION_NONE)
         {
             // both the CAN frame and the error structure are blank

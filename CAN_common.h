@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 
-// base CAN frame format uses 11-bit IDs (uint16)
-// extended CAN frame format uses 29-bit IDs (uint32)
-typedef uint16_t can_object_id_t;
-
 #define CAN_FRAME_MAX_PAYLOAD 7 // excluding the function ID
 #define CAN_TIMER_DISABLED UINT16_MAX
 #define CAN_ERROR_DISABLED UINT16_MAX
+
+// base CAN frame format uses 11-bit IDs (uint16)
+// extended CAN frame format uses 29-bit IDs (uint32)
+typedef uint16_t can_object_id_t;
+const can_object_id_t CAN_SYSTEM_ID_BROADCAST = 0x0000;
 
 // CAN Function IDs
 enum can_function_id_t : uint8_t
@@ -20,6 +21,7 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_TOGGLE_IN = 0x02,
     CAN_FUNC_ACTION_IN = 0x03,
 
+    CAN_FUNC_LOCK_IN = 0x10,
     CAN_FUNC_REQUEST_IN = 0x11,
 
     CAN_FUNC_SEND_RAW_INIT_IN = 0x30,
@@ -86,6 +88,11 @@ static_assert(sizeof(can_function_id_t) == 1);
 /// @param can_frame CAN frame to clear
 void clear_can_frame_struct(can_frame_t &can_frame);
 
+/// @brief Copies data from one CAN frame to another
+/// @param dest_can_frame Destination CAN frame
+/// @param src_can_frame Source CAN frame
+void copy_can_frame_struct(can_frame_t &dest_can_frame, can_frame_t src_can_frame);
+
 enum timer_type_t : uint8_t
 {
     CAN_TIMER_TYPE_NONE = 0b00000000,
@@ -115,6 +122,15 @@ enum object_type_t : uint8_t
     CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR = 0x05,
 };
 
+enum lock_func_level_t : uint8_t
+{
+    CAN_LOCK_LEVEL_UNLOCKED = 0x00,
+
+    CAN_LOCK_LEVEL_PARTIAL_LOCK = 0x0F,
+
+    CAN_LOCK_LEVEL_TOTAL_LOCK = 0xFF
+};
+
 enum error_section_t : uint8_t
 {
     ERROR_SECTION_NONE = 0x00,
@@ -138,6 +154,11 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_TOGGLE_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA = 0x0B,
     ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING = 0x0C,
     ERROR_CODE_OBJECT_ACTION_COMMAND_FRAME_SHOULD_NOT_HAVE_DATA = 0x0D,
+    ERROR_CODE_OBJECT_LOCK_COMMAND_FRAME_DATA_LENGTH_ERROR = 0x0E,
+    ERROR_CODE_OBJECT_LOCK_LEVEL_IS_UNKNOWN = 0x0F,
+    ERROR_CODE_OBJECT_LOCKED = 0x10,
+    ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
+
 
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
@@ -170,6 +191,7 @@ enum can_result_t : uint8_t
 
 using event_handler_t = can_result_t (*)(can_frame_t &can_frame, event_type_t event_type, can_error_t &error);
 using timer_handler_t = can_result_t (*)(can_frame_t &can_frame, timer_type_t timer_type, can_error_t &error);
+using lock_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using toggle_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
