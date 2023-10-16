@@ -159,7 +159,6 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_LOCKED = 0x10,
     ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
 
-
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
 };
 
@@ -198,9 +197,9 @@ using toggle_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &e
 using action_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 
 /*************************************************************************************************
- * 
+ *
  * Common helper functions
- * 
+ *
  *************************************************************************************************/
 class CANObjectInterface;
 void set_block_info_params(CANObjectInterface &block_sys_object);
