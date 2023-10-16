@@ -154,10 +154,7 @@ public:
                 // transfer broadcast frames to all registered CAN-Objects
                 if (_can_frame_buffer[i].object_id == CAN_SYSTEM_ID_BROADCAST)
                 {
-                    //  broadcast of "request", "system request" and "lock" functions only are allowed
-                    if (_can_frame_buffer[i].function_id != CAN_FUNC_REQUEST_IN &&
-                        _can_frame_buffer[i].function_id != CAN_FUNC_SYSTEM_REQUEST_IN &&
-                        _can_frame_buffer[i].function_id != CAN_FUNC_LOCK_IN)
+                    if (!_IsBroadcastFunctionAllowed(_can_frame_buffer[i].function_id))
                     {
                         _can_frame_buffer[i].initialized = false;
                         continue;
@@ -221,8 +218,13 @@ public:
     /// @return true if data length exceeds 0 and a CANObject with the ID is registered, false if not
     virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) override
     {
-        if (data == nullptr || length == 0 ||
-            (!HasCanObject(id) && id != CAN_SYSTEM_ID_BROADCAST))
+        if (data == nullptr || length == 0)
+            return false;
+
+        if (!HasCanObject(id) && id != CAN_SYSTEM_ID_BROADCAST)
+            return false;
+
+        if (id == CAN_SYSTEM_ID_BROADCAST && !_IsBroadcastFunctionAllowed((can_function_id_t)data[0]))
             return false;
 
         _can_frame_buffer[_frame_buffer_index].object_id = id;
@@ -332,5 +334,16 @@ private:
             error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
         }
         _FillErrorCanFrame(can_frame, error);
+    }
+
+    /// @brief Checks if specified CAN function is allowed in broadcast mode
+    /// @param func_id CAN function ID for check
+    /// @return 'true' if CAN function is allowed, 'false' if it is not.
+    bool _IsBroadcastFunctionAllowed(can_function_id_t func_id)
+    {
+        //  broadcast of "request", "system request" and "lock" functions only are allowed
+        return func_id == CAN_FUNC_REQUEST_IN ||
+               func_id == CAN_FUNC_SYSTEM_REQUEST_IN ||
+               func_id == CAN_FUNC_LOCK_IN;
     }
 };
