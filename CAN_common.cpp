@@ -129,6 +129,12 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_LOCK_IN:
         return "lock: in";
 
+    case CAN_FUNC_LOCK_OUT_OK:
+        return "lock: ok answer";
+
+    case CAN_FUNC_LOCK_OUT_ERR:
+        return "lock: error answer";
+
     case CAN_FUNC_REQUEST_IN:
         return "request: in";
 

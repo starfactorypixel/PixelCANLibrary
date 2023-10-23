@@ -22,6 +22,9 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_ACTION_IN = 0x03,
 
     CAN_FUNC_LOCK_IN = 0x10,
+    CAN_FUNC_LOCK_OUT_OK = 0x50,
+    CAN_FUNC_LOCK_OUT_ERR = 0xD0,
+
     CAN_FUNC_REQUEST_IN = 0x11,
 
     CAN_FUNC_SEND_RAW_INIT_IN = 0x30,

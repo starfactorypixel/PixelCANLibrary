@@ -653,7 +653,7 @@ public:
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_LOCK_COMMAND_FRAME_DATA_LENGTH_ERROR;
-                error.function_id = CAN_FUNC_EVENT_ERROR;
+                error.function_id = CAN_FUNC_LOCK_OUT_ERR;
             }
             else if (!_IsItKnownLockLevel((lock_func_level_t)can_frame.data[0]))
             {
@@ -661,7 +661,7 @@ public:
                 can_frame.initialized = false;
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_LOCK_LEVEL_IS_UNKNOWN;
-                error.function_id = CAN_FUNC_EVENT_ERROR;
+                error.function_id = CAN_FUNC_LOCK_OUT_ERR;
             }
             else
             {
@@ -673,7 +673,7 @@ public:
                 }
                 else
                 {
-                    handler_result = _PrepareRawCanFrame(can_frame, error, CAN_FUNC_EVENT_OK);
+                    handler_result = _PrepareRawCanFrame(can_frame, error, CAN_FUNC_LOCK_OUT_OK, &specified_lock_level, 1);
                 }
 
                 // if handler was successful then we need to save specified lock level
