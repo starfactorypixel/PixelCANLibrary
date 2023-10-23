@@ -136,7 +136,10 @@ enum error_section_t : uint8_t
     ERROR_SECTION_NONE = 0x00,
     ERROR_SECTION_CAN_MANAGER = 0x01,
     ERROR_SECTION_CAN_OBJECT = 0x02,
+    ERROR_SECTION_HARDWARE = 0x03,
 };
+
+using error_code_hardware_t = uint8_t;
 
 enum error_code_object_t : uint8_t
 {
@@ -158,8 +161,10 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_LOCK_LEVEL_IS_UNKNOWN = 0x0F,
     ERROR_CODE_OBJECT_LOCKED = 0x10,
     ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
+    ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING = 0x12,
 
-    ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
+    // TODO: used for debug and as a temporary value; should not be used in release code
+    ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF,
 };
 
 enum error_code_manager_t : uint8_t
@@ -167,7 +172,8 @@ enum error_code_manager_t : uint8_t
     ERROR_CODE_MANAGER_NONE = 0x00,
     ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK = 0x01,
 
-    ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF, // TODO: used for debug and as a temporary value; should be replaced later with correct code
+    // TODO: used for debug and as a temporary value; should not be used in release code
+    ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF,
 };
 
 struct can_error_t

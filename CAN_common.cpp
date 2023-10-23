@@ -358,6 +358,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME:
             return "error: section [CANObject], code [incoming CAN frame not initialized]";
+        
+        case ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING:
+            return "error: section [CANObject], code [hardware error code is missing]";
 
         case ERROR_CODE_OBJECT_SOMETHING_WRONG:
             return "error: section [CANObject], code [something went wrong]";
@@ -366,6 +369,9 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
             return "error: section [CANObject], code [unknown]";
         }
         break;
+    
+    case ERROR_SECTION_HARDWARE:
+        return "error: section [hardware], code [description is hardware related]";
 
     default:
         return "error: section [unknown], code [-]";

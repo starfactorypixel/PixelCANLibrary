@@ -28,6 +28,11 @@ public:
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &SetErrorEventDelay(uint16_t delay_ms) = 0;
 
+    /// @brief Sets the hardware dependent error code.
+    /// @param error_code Error code to set.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetHardwareErrorCode(error_code_hardware_t error_code) = 0;
+
     /// @brief Checks whether the external event function handler is set.
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionEvent() = 0;
@@ -296,6 +301,16 @@ public:
         return *this;
     };
 
+    /// @brief Sets the hardware dependent error code.
+    /// @param error_code Error code to set.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetHardwareErrorCode(error_code_hardware_t error_code) override
+    {
+        _error_code_hardware = error_code;
+
+        return *this;
+    }
+
     /// @brief Checks whether the external event function handler is set.
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionEvent() override
@@ -471,6 +486,13 @@ public:
             if ((_states_of_data_fields[i] & CAN_EVENT_TYPE_MASK) > max_event_type)
                 max_event_type = (event_type_t)(_states_of_data_fields[i] & (uint8_t)CAN_EVENT_TYPE_MASK);
         }
+        if (max_event_type > CAN_EVENT_TYPE_NONE &&
+            max_event_type != CAN_EVENT_TYPE_ERROR &&
+            _error_code_hardware > 0)
+        {
+            // clear hardware error code if all field's error levels are not CAN_EVENT_TYPE_ERROR
+            _error_code_hardware = 0;
+        }
 
         can_result_t handler_result = CAN_RESULT_IGNORE;
 
@@ -496,9 +518,7 @@ public:
         }
         else if (max_event_type > CAN_EVENT_TYPE_NORMAL && _error_period != CAN_ERROR_DISABLED)
         {
-            // enclosed if fixes that:
-            // A bug or a feature found =)
-            // If error-event was sent and the time has not come for the next sending, then timer will be done regardless error state
+            // error flood prevention
             if (time - _last_event_time >= _error_period)
             {
                 if (HasExternalFunctionEvent())
@@ -865,6 +885,7 @@ private:
 
     uint16_t _timer_period = CAN_TIMER_DISABLED;
     uint16_t _error_period = CAN_ERROR_DISABLED;
+    error_code_hardware_t _error_code_hardware = 0;
 
     bool _flood_mode = false;
     bool _has_new_data = false;
@@ -898,7 +919,7 @@ private:
         // CAN_FUNC_LOCK_IN & CAN_FUNC_SYSTEM_REQUEST_IN should always work
         if (func_id == CAN_FUNC_LOCK_IN || func_id == CAN_FUNC_SYSTEM_REQUEST_IN)
             return false;
-        
+
         bool result = true;
 
         switch (_lock_level)
@@ -933,13 +954,16 @@ private:
 
         case CAN_EVENT_TYPE_ERROR:
             can_frame.initialized = false;
-            error.error_section = ERROR_SECTION_CAN_OBJECT;
-            error.error_code = ERROR_CODE_OBJECT_SOMETHING_WRONG;
-            /* TODO: custom error code here like that:
-            can_frame.function_id = CAN_FUNC_EVENT_ERROR;
-            can_frame.raw_data_length = sizeof(can_frame.function_id); // + sizeof(can_error_t);
-            can_frame.initialized = true;
-            */
+            if (_error_code_hardware != 0)
+            {
+                error.error_section = ERROR_SECTION_HARDWARE;
+                error.error_code = _error_code_hardware;
+            }
+            else
+            {
+                error.error_section = ERROR_SECTION_CAN_OBJECT;
+                error.error_code = ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING;
+            }
             return CAN_RESULT_ERROR;
 
         case CAN_EVENT_TYPE_NONE:
