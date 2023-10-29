@@ -710,7 +710,7 @@ public:
         // restoring ID in case an external handler has overwritten it
         can_frame.object_id = GetId();
 
-        if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE)
+        if (!can_frame.initialized && error.error_section == ERROR_SECTION_NONE && handler_result != CAN_RESULT_IGNORE)
         {
             handler_result = CAN_RESULT_ERROR;
             error.error_section = ERROR_SECTION_CAN_OBJECT;
