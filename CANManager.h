@@ -324,16 +324,19 @@ private:
     /// @param error [IN] Error structure.
     void _ValidateAndFillErrorCanFrame(can_frame_t &can_frame, can_error_t error)
     {
-        if (can_frame.initialized)
-            return; // CAN frame is specified, it's ok
-
-        if (error.error_section == ERROR_SECTION_NONE)
+        if (error.error_section != ERROR_SECTION_NONE)
+        {
+            _FillErrorCanFrame(can_frame, error);
+            return;
+        }
+        else if (!can_frame.initialized)
         {
             // both the CAN frame and the error structure are blank
             error.error_section = ERROR_SECTION_CAN_MANAGER;
             error.error_code = ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK;
+            _FillErrorCanFrame(can_frame, error);
+            return;
         }
-        _FillErrorCanFrame(can_frame, error);
     }
 
     /// @brief Checks if specified CAN function is allowed in broadcast mode
