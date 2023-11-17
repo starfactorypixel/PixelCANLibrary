@@ -62,9 +62,12 @@ public:
 };
 
 /******************************************************************************************
- *
  ******************************************************************************************/
-template <uint8_t _max_objects = 16, uint8_t _can_frame_buffer_size = 16>
+/// @brief CANManager manages all the CANObject of the board/system and performs base frame processing
+/// @tparam _max_objects — The maximum number of CANObjects which can be handle by CANManager
+/// @tparam _can_frame_buffer_size — The size of buffer, measured in number of CAN frame structures
+/// @tparam tick_time — ms, the minimal period between CANManager::Process() informative calls
+template <uint8_t _max_objects = 16, uint8_t _can_frame_buffer_size = 16, uint8_t tick_time = 10>
 class CANManager : public CANManagerInterface
 {
     static_assert(_max_objects > 0); // 0 objects is not allowed
@@ -140,7 +143,7 @@ public:
     /// @param time Current time
     virtual void Process(uint32_t time) override
     {
-        if (time - _last_tick < _tick_time)
+        if (time - _last_tick < tick_time)
             return;
 
         _last_tick = time;
@@ -258,10 +261,6 @@ public:
     };
 
 private:
-    // don't do data processing very often
-    // _tick_time is minimal delay in ms between the data processing
-    static const uint8_t _tick_time = 10;
-
     // data structures for outgoing CAN frames & errors
     can_frame_t _tx_can_frame = {};
     can_error_t _tx_error = {};
