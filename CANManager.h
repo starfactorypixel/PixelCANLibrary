@@ -59,6 +59,10 @@ public:
     /// @param data Frame data to send in CAN frame
     /// @param data_length Frame data length
     virtual void SendCustomFrame(CANObjectInterface &can_object, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) = 0;
+
+    /// @brief Returns the number of CAN frames waiting to be processed.
+    /// @return The size of incoming frame queue.
+    virtual uint8_t GetIncomingQueueLength() = 0;
 };
 
 /******************************************************************************************
@@ -258,7 +262,14 @@ public:
         // restoring ID (if it was overwritten by the handler)
         _tx_can_frame.object_id = can_object.GetId();
         _SendCanData(_tx_can_frame);
-    };
+    }
+
+    /// @brief Returns the number of CAN frames waiting to be processed.
+    /// @return The length of incoming frame queue.
+    virtual uint8_t GetIncomingQueueLength() override
+    {
+        return _frame_buffer_index;
+    }
 
 private:
     // data structures for outgoing CAN frames & errors
