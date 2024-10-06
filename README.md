@@ -16,7 +16,7 @@ lib_deps =
 
 
 
-# Update library in you project
+# Update library in your project
 
 Two ways:
 1. Run command in the terminal
