@@ -210,6 +210,7 @@ template <typename T, uint8_t _item_count = 1>
 class CANObject : public CANObjectInterface
 {
     static_assert(_item_count > 0); // 0 data fields isn't allowed
+    static_assert(_item_count * sizeof(T) <= 7); // static data size validation (to fit it into the can frame)
 public:
     /// @brief Default constructor is forbidden.
     CANObject() = delete;
@@ -877,7 +878,6 @@ private:
 
     // local data storage
     T _data_fields[_item_count] = {0};
-    static_assert(_item_count * sizeof(T) <= 7); // static data size validation (to fit it into the can frame)
     uint8_t _states_of_data_fields[_item_count] = {0};
 
     uint32_t _last_timer_time = 0;
