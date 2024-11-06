@@ -21,6 +21,8 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_TOGGLE_IN = 0x02,
     CAN_FUNC_ACTION_IN = 0x03,
 
+    CAN_FUNC_SET_REAL_TIME_IN = 0x0A,
+
     CAN_FUNC_LOCK_IN = 0x10,
     CAN_FUNC_LOCK_OUT_OK = 0x50,
     CAN_FUNC_LOCK_OUT_ERR = 0xD0,
@@ -82,6 +84,7 @@ struct can_frame_t
     };
     uint8_t raw_data_length = 0;
     bool initialized = false;
+    uint32_t time_ms = 0;
 };
 // can_function_id_t must have a size of 1 byte
 // otherwise we need to update can_frame_t structure
@@ -123,14 +126,13 @@ enum object_type_t : uint8_t
     CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH = 0x03,
     CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES = 0x04,
     CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR = 0x05,
+    CAN_OBJECT_TYPE_SILENT = 0x06,
 };
 
 enum lock_func_level_t : uint8_t
 {
     CAN_LOCK_LEVEL_UNLOCKED = 0x00,
-
     CAN_LOCK_LEVEL_PARTIAL_LOCK = 0x0F,
-
     CAN_LOCK_LEVEL_TOTAL_LOCK = 0xFF
 };
 
@@ -166,7 +168,7 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
     ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING = 0x12,
 
-    // TODO: used for debug and as a temporary value; should not be used in release code
+    // NOTE: used for debug and as a temporary value; should not be used in release code
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF,
 };
 
@@ -175,7 +177,7 @@ enum error_code_manager_t : uint8_t
     ERROR_CODE_MANAGER_NONE = 0x00,
     ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK = 0x01,
 
-    // TODO: used for debug and as a temporary value; should not be used in release code
+    // NOTE: used for debug and as a temporary value; should not be used in release code
     ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF,
 };
 
@@ -202,6 +204,8 @@ using timer_handler_t = can_result_t (*)(can_frame_t &can_frame, timer_type_t ti
 using lock_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using request_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using set_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
+using set_realtime_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
+using set_realtime_error_handler_t = void (*)(uint32_t time_has_passed_ms);
 using toggle_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 using action_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &error);
 

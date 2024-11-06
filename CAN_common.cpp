@@ -10,6 +10,7 @@ void clear_can_frame_struct(can_frame_t &can_frame)
     memset(can_frame.raw_data, 0, sizeof(can_frame.raw_data));
     can_frame.raw_data_length = 0;
     can_frame.initialized = false;
+    can_frame.time_ms = 0;
 }
 
 /// @brief Copies data from one CAN frame to another
@@ -19,6 +20,7 @@ void copy_can_frame_struct(can_frame_t &dest_can_frame, can_frame_t src_can_fram
 {
     memcpy(dest_can_frame.raw_data, src_can_frame.raw_data, sizeof(dest_can_frame.raw_data));
     dest_can_frame.initialized = src_can_frame.initialized;
+    dest_can_frame.time_ms = src_can_frame.time_ms;
     dest_can_frame.object_id = src_can_frame.object_id;
     dest_can_frame.raw_data_length = src_can_frame.raw_data_length;
 }
@@ -125,6 +127,9 @@ const char *get_function_name(can_function_id_t function_id)
 
     case CAN_FUNC_ACTION_IN:
         return "action: in";
+    
+    case CAN_FUNC_SET_REAL_TIME_IN:
+        return "set realtime: in";
 
     case CAN_FUNC_LOCK_IN:
         return "lock: in";
@@ -253,9 +258,6 @@ const char *get_object_type_name(object_type_t object_type)
 #if defined(DEBUG) || defined(DETAILED_DEBUG)
     switch (object_type)
     {
-    case CAN_OBJECT_TYPE_UNKNOWN:
-        return "object type: unknown";
-
     case CAN_OBJECT_TYPE_ORDINARY:
         return "object type: ordinary object";
 
@@ -270,9 +272,13 @@ const char *get_object_type_name(object_type_t object_type)
 
     case CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR:
         return "object type: system object - BlockError";
+    
+    case CAN_OBJECT_TYPE_SILENT:
+        return "object type: silent listener";
 
+    case CAN_OBJECT_TYPE_UNKNOWN:
     default:
-        return "event type: unknown";
+        return "object type: unknown";
     }
 #else  // DEBUG
     return "detailed names are disabled";

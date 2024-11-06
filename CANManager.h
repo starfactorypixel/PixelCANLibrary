@@ -154,6 +154,9 @@ public:
             CANObjectInterface *can_object = nullptr;
             for (uint8_t i = 0; i < _frame_buffer_index; i++)
             {
+                // set time for canframe (assume CAN frame comes now)
+                _can_frame_buffer[i].time_ms = time;
+
                 // transfer broadcast frames to all registered CAN-Objects
                 if (_can_frame_buffer[i].object_id == CAN_SYSTEM_ID_BROADCAST)
                 {
@@ -180,6 +183,12 @@ public:
                 else
                 {
                     can_object = GetCanObject(_can_frame_buffer[i].object_id);
+                    // don't check for nullptr here because existing of the object was checked in IncomingCANFrame()
+                    // if (can_object == nullptr)
+                    // {
+                    //     _can_frame_buffer[i].initialized = false;
+                    //     continue;
+                    // }
                     if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], _tx_error))
                     {
                         _can_frame_buffer[i].initialized = false;

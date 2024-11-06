@@ -46,6 +46,69 @@ public:
     /// @return 'true' if the external handler exists, `false` if not
     virtual bool HasExternalFunctionSet() = 0;
 
+    /// @brief Register an external handler for set real-time commands. It will be called when set_realtime command comes.
+    /// @param set_realtime_handler Pointer to the set real-time external handler.
+    /// @param error_handler Pointer to the external error handler
+    /// @param data_interval_ms The interval between frames in milliseconds.
+    /// @param data_zero_point The data zero point.
+    /// @param is_silent 'true' if the object is 'slave' and it is just listening the CAN bus. 'false' in case the object is 'master' and it is sending real-time data.
+    /// @param frames_can_lost The number of frames which can be lost before the object generates an error.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionSetRealtime(set_realtime_handler_t set_realtime_handler, set_realtime_error_handler_t error_handler, uint16_t data_interval_ms,
+                                                            void *data_zero_point, bool is_silent = true, uint8_t frames_can_lost = 3) = 0;
+
+    /// @brief Register an external handler for set real-time commands. It will be called when set_realtime command comes.
+    /// @param set_realtime_handler Pointer to the set real-time external handler.
+    /// @param error_handler Pointer to the external error handler
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionSetRealtime(set_realtime_handler_t set_realtime_handler, set_realtime_error_handler_t error_handler) = 0;
+
+    /// @brief Sets the interval between CAN frames in milliseconds for real-time data.
+    /// @param data_interval_ms The interval in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeDataInterval(uint16_t data_interval_ms) = 0;
+
+    /// @brief Returns real-time data interval of the object.
+    /// @return Real-time data interval.
+    virtual uint16_t GetRealtimeDataInterval() = 0;
+
+    /// @brief Sets zero point for real-time data.
+    /// @param data_zero_point Pointer to the data zero point.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeZeroPoint(void *data_zero_point) = 0;
+
+    /// @brief Returns zero point of the real-time object.
+    /// @return Pointer to the real-time zero point.
+    virtual void *GetRealtimeZeroPoint() = 0;
+
+    /// @brief Sets the number of CAN frames which can be lost before the silent object generates an error.
+    /// @param frames_can_lost The number of CAN frames.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeFramesCanLost(uint8_t frames_can_lost) = 0;
+
+    /// @brief Returns a number of CAN framse that can be lost by the silent listener object before it falls into the error state.
+    /// @return The number of CAN frames that can be lost.
+    virtual uint8_t GetRealtimeFramesCanLost() = 0;
+
+    /// @brief Checks whether the external set real-time function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionSetRealtime() = 0;
+
+    /// @brief Checks the error state of silent real-time object
+    /// @return 'true' if object is silent and it is in error state
+    virtual bool HasRealtimeError() = 0;
+
+    /// @brief Resets the error state of the silent object
+    virtual void ResetRealtimeErrorState() = 0;
+
+    /// @brief Checks whether the real-time function is stopped. The sender object is stoppet if current value is in zero-point. The silent listener object becomes stopped after receiving zero-point value.
+    /// @return 'true' if real-time object is stopped.
+    virtual bool DoesRealtimeStopped() = 0;
+
+    /// @brief Returns last real-time CAN frame received or sended by the object.
+    /// @return Last real-time CAN frame ID.
+    virtual uint8_t GetRealtimeLastFrameId() = 0;
+
     /// @brief Registers an external handler for timer. It will be called when timer occurs.
     /// @param timer_handler Pointer to the timer handler.
     /// @param period_ms Timer's period in milliseconds.
@@ -172,6 +235,10 @@ public:
     /// @return 'true' it the object is ordinary.
     virtual bool IsObjectTypeOrdinary() = 0;
 
+    /// @brief Checks if the object is silent.
+    /// @return 'true' it the object is silent.
+    virtual bool IsObjectTypeSilent() = 0;
+
     /// @brief Checks if the object type is unknown.
     /// @return 'true' if the object type is unknown.
     virtual bool IsObjectTypeUnknown() = 0;
@@ -209,7 +276,7 @@ public:
 template <typename T, uint8_t _item_count = 1>
 class CANObject : public CANObjectInterface
 {
-    static_assert(_item_count > 0); // 0 data fields isn't allowed
+    static_assert(_item_count > 0);              // 0 data fields isn't allowed
     static_assert(_item_count * sizeof(T) <= 7); // static data size validation (to fit it into the can frame)
 public:
     /// @brief Default constructor is forbidden.
@@ -334,6 +401,128 @@ public:
     virtual bool HasExternalFunctionSet() override
     {
         return _set_handler != nullptr;
+    };
+
+    /// @brief Register an external handler for set realtime commands. It will be called when set_realtime command comes.
+    /// @param set_realtime_handler Pointer to the set realtime external handler.
+    /// @param error_handler Pointer to the external error handler.
+    /// @param data_interval_ms The interval between frames in milliseconds.
+    /// @param data_zero_point The data zero point.
+    /// @param is_silent 'true' if the object is 'slave' and it is just listening the CAN bus. 'false' in case the object is 'master' and it is sending realtime data.
+    /// @param frames_can_lost The number of frames which can be lost before the object generates an error.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionSetRealtime(set_realtime_handler_t set_realtime_handler, set_realtime_error_handler_t error_handler, uint16_t data_interval_ms,
+                                                            void *data_zero_point, bool is_silent = true, uint8_t frames_can_lost = 3) override
+    {
+        RegisterFunctionSetRealtime(set_realtime_handler, error_handler);
+        SetRealtimeDataInterval(data_interval_ms);
+        SetRealtimeZeroPoint(data_zero_point);
+        SetRealtimeFramesCanLost(frames_can_lost);
+        if (is_silent)
+        {
+            SetObjectType(CAN_OBJECT_TYPE_SILENT);
+            _realtime_stopped = true;
+        }
+
+        return *this;
+    };
+
+    /// @brief Register an external handler for set realtime commands. It will be called when set_realtime command comes.
+    /// @param set_realtime_handler Pointer to the set realtime external handler.
+    /// @param error_handler Pointer to the external error handler.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &RegisterFunctionSetRealtime(set_realtime_handler_t set_realtime_handler, set_realtime_error_handler_t error_handler) override
+    {
+        _set_realtime_handler = set_realtime_handler;
+        _set_realtime_error_handler = error_handler;
+
+        return *this;
+    };
+
+    /// @brief Sets the interval between CAN frames in milliseconds for realtime data.
+    /// @param data_interval_ms The interval in milliseconds.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeDataInterval(uint16_t data_interval_ms) override
+    {
+        _realtime_frame_interval = data_interval_ms;
+
+        return *this;
+    };
+
+    /// @brief Returns real-time data interval of the object.
+    /// @return Real-time data interval.
+    virtual uint16_t GetRealtimeDataInterval() override
+    {
+        return _realtime_frame_interval;
+    };
+
+    /// @brief Sets zero point for real-time data.
+    /// @param data_zero_point Pointer to the data zero point.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeZeroPoint(void *data_zero_point) override
+    {
+        _realtime_zero_point = *(T *)data_zero_point;
+
+        return *this;
+    };
+
+    /// @brief Returns zero point of the real-time object.
+    /// @return Pointer to the real-time zero point.
+    virtual void *GetRealtimeZeroPoint() override
+    {
+        return &_realtime_zero_point;
+    };
+
+    /// @brief Sets the number of CAN frames which can be lost before the object generates an error.
+    /// @param frames_can_lost The number of CAN frames.
+    /// @return CANObjectInterface reference
+    virtual CANObjectInterface &SetRealtimeFramesCanLost(uint8_t frames_can_lost) override
+    {
+        _realtime_frames_can_lost = frames_can_lost;
+
+        return *this;
+    }
+
+    /// @brief Returns a number of CAN framse that can be lost by the silent listener object before it falls into the error state.
+    /// @return The number of CAN frames that can be lost.
+    virtual uint8_t GetRealtimeFramesCanLost() override
+    {
+        return _realtime_frames_can_lost;
+    };
+
+    /// @brief Checks whether the external set realtime function handler is set.
+    /// @return 'true' if the external handler exists, `false` if not
+    virtual bool HasExternalFunctionSetRealtime() override
+    {
+        return _set_realtime_handler != nullptr && _set_realtime_error_handler != nullptr;
+    };
+
+    /// @brief Checks error state of silent real-time object
+    /// @return 'true' if object is silent and it is in error state
+    virtual bool HasRealtimeError() override
+    {
+        return /*IsObjectTypeSilent() &&*/ _realtime_has_error;
+    };
+
+    /// @brief Resets the error state of the silent object
+    virtual void ResetRealtimeErrorState() override
+    {
+        _realtime_has_error = false;
+        _realtime_silent_should_ignore_frame_id_once = true;
+    };
+
+    /// @brief Checks whether the real-time function is stopped. The sender object is stoppet if current value is in zero-point. The silent listener object becomes stopped after receiving zero-point value.
+    /// @return 'true' if real-time object is stopped.
+    virtual bool DoesRealtimeStopped() override
+    {
+        return _realtime_stopped;
+    };
+
+    /// @brief Returns last real-time CAN frame received or sended by the object.
+    /// @return Last real-time CAN frame ID.
+    virtual uint8_t GetRealtimeLastFrameId() override
+    {
+        return _realtime_frame_id;
     };
 
     /// @brief Registers an external handler for timer. It will be called when timer occurs.
@@ -477,6 +666,21 @@ public:
     /// @return The result of CANObject processing (should we send any CAN frames or not)
     virtual can_result_t Process(uint32_t time, can_frame_t &can_frame, can_error_t &error) override
     {
+        // Check data timeout for real-time silent (listener) objects
+        if (IsObjectTypeSilent())
+        {
+            if (HasExternalFunctionSetRealtime() &&
+                !DoesRealtimeStopped() &&
+                _realtime_frame_interval > 0 &&
+                time - _last_realtime_frame_time >= _realtime_frame_interval * _realtime_frames_can_lost)
+            {
+                _realtime_has_error = true;
+                _set_realtime_error_handler(time - _last_realtime_frame_time);
+                _realtime_stopped = true;
+            }
+            return CAN_RESULT_IGNORE; // all other functions are ignored for silent objects
+        }
+
         timer_type_t max_timer_type = CAN_TIMER_TYPE_NONE;
         event_type_t max_event_type = CAN_EVENT_TYPE_NONE;
         for (uint8_t i = 0; i < _item_count; i++)
@@ -498,7 +702,22 @@ public:
         can_result_t handler_result = CAN_RESULT_IGNORE;
 
         clear_can_frame_struct(can_frame);
-        if (max_event_type == CAN_EVENT_TYPE_NORMAL)
+        if (_realtime_frame_interval > 0 &&
+            !DoesRealtimeStopped() &&
+            time - _last_realtime_frame_time >= _realtime_frame_interval)
+        {
+            // Automatic sending of real-time data by sender object
+            handler_result = _PrepareRealtimeCanFrame(can_frame, error);
+            if (handler_result == CAN_RESULT_CAN_FRAME)
+            {
+                _last_realtime_frame_time = time;
+                if (_realtime_zero_point == GetValue(0))
+                {
+                    _realtime_stopped = true;
+                }
+            }
+        }
+        else if (max_event_type == CAN_EVENT_TYPE_NORMAL)
         {
             // CAN_EVENT_TYPE_NORMAL should be sent immediately, we don't need to check the time
             if (HasExternalFunctionEvent())
@@ -556,6 +775,7 @@ public:
     /// @brief Process incoming CAN frame
     /// @param can_frame CAN frame for processing
     /// @param error An outgoing error structure. It will be filled by object if something went wrong.
+    /// @param time Current time. If time not specified CAN bus listeners can't measure realtime data timeout.
     /// @return The result of incoming can frame processing (should we send any CAN frames or not)
     virtual can_result_t InputCanFrame(can_frame_t &can_frame, can_error_t &error) override
     {
@@ -644,6 +864,28 @@ public:
                 error.error_section = ERROR_SECTION_CAN_OBJECT;
                 error.error_code = ERROR_CODE_OBJECT_ACTION_FUNCTION_IS_MISSING;
                 error.function_id = CAN_FUNC_EVENT_ERROR;
+            }
+            break;
+
+        case CAN_FUNC_SET_REAL_TIME_IN:
+            // By default sender objects shouldn't react to this type of frames, so default result is CAN_RESULT_IGNORE
+            handler_result = CAN_RESULT_IGNORE;
+            if (IsObjectTypeSilent() && HasExternalFunctionSetRealtime() && !HasRealtimeError())
+            {
+                if (can_frame.raw_data_length > 2 &&
+                    (can_frame.data[0] == _realtime_frame_id + 1 || _realtime_silent_should_ignore_frame_id_once))
+                {
+                    _last_realtime_frame_time = can_frame.time_ms;
+                    _realtime_silent_should_ignore_frame_id_once = false;
+                    _realtime_frame_id = can_frame.data[0];
+                    T data = *(T *)&can_frame.data[1];
+                    SetValue(0, data);
+                    handler_result = _set_realtime_handler(can_frame, error);
+                    if (data == *(T*)GetRealtimeZeroPoint())
+                    {
+                        _realtime_stopped = true;
+                    }
+                }
             }
             break;
 
@@ -781,7 +1023,10 @@ public:
     /// @return 'true' if the object is the system one (not ordinary).
     virtual bool IsObjectTypeSystem() override
     {
-        return !IsObjectTypeOrdinary() && !IsObjectTypeUnknown();
+        return (GetObjectType() == CAN_OBJECT_TYPE_SYSTEM_BLOCK_INFO) ||
+               (GetObjectType() == CAN_OBJECT_TYPE_SYSTEM_BLOCK_HEALTH) ||
+               (GetObjectType() == CAN_OBJECT_TYPE_SYSTEM_BLOCK_FEATURES) ||
+               (GetObjectType() == CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR);
     };
 
     /// @brief Checks if the object is ordinary.
@@ -789,6 +1034,13 @@ public:
     virtual bool IsObjectTypeOrdinary() override
     {
         return GetObjectType() == CAN_OBJECT_TYPE_ORDINARY;
+    };
+
+    /// @brief Checks if the object is silent.
+    /// @return 'true' it the object is silent.
+    virtual bool IsObjectTypeSilent() override
+    {
+        return GetObjectType() == CAN_OBJECT_TYPE_SILENT;
     };
 
     /// @brief Checks if the object type is unknown.
@@ -849,6 +1101,16 @@ public:
         _data_fields[index] = value;
         _states_of_data_fields[index] = timer_type | event_type;
         _has_new_data = true;
+
+        // TODO: it is ugly =( Refactoring needed!
+        if (_realtime_frame_interval > 0)
+        {
+            // This affects both silent objects and sender objects
+            if (value != _realtime_zero_point && DoesRealtimeStopped())
+            {
+                _realtime_stopped = false;
+            }
+        }
     };
 
     /// @brief Universal getter for CANObject's data fields
@@ -882,19 +1144,32 @@ private:
 
     uint32_t _last_timer_time = 0;
     uint32_t _last_event_time = 0;
+    uint32_t _last_realtime_frame_time = 0;
+    uint8_t _realtime_frame_id = 0;
+    bool _realtime_silent_should_ignore_frame_id_once = false;
 
     uint16_t _timer_period = CAN_TIMER_DISABLED;
     uint16_t _error_period = CAN_ERROR_DISABLED;
     error_code_hardware_t _error_code_hardware = 0;
 
+    // uint16_t _realtime_frame_interval = CAN_REALTIME_DISABLED;
+    uint16_t _realtime_frame_interval = 0;
+    bool _realtime_stopped = false;
+
     bool _flood_mode = false;
     bool _has_new_data = false;
+
+    T _realtime_zero_point = 0;
+    uint8_t _realtime_frames_can_lost = 0;
+    bool _realtime_has_error = false;
 
     object_type_t _object_type = CAN_OBJECT_TYPE_UNKNOWN;
     lock_func_level_t _lock_level = CAN_LOCK_LEVEL_UNLOCKED;
 
     event_handler_t _event_handler = nullptr;
     set_handler_t _set_handler = nullptr;
+    set_realtime_handler_t _set_realtime_handler = nullptr;
+    set_realtime_error_handler_t _set_realtime_error_handler = nullptr;
     timer_handler_t _timer_handler = nullptr;
     lock_handler_t _lock_handler = nullptr;
     request_handler_t _request_handler = nullptr;
@@ -1047,6 +1322,41 @@ private:
         }
 
         return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_SYSTEM_REQUEST_OUT_OK, &_object_type, sizeof(_object_type));
+    }
+
+    /// @brief Fills CAN frame with real-time data. This method is called for all real-time data sender objects.
+    /// @param can_frame An outgoing CAN frame. It is initially empty.
+    /// @param error An outgoing error structure. It will be filled by object if something went wrong.
+    /// @return The result of operation (should we send any CAN/Error frames or not)
+    can_result_t _PrepareRealtimeCanFrame(can_frame_t &can_frame, can_error_t &error)
+    {
+        if (can_frame.initialized)
+        {
+            clear_can_frame_struct(can_frame);
+        }
+
+        if (_realtime_frame_id == UINT8_MAX)
+        {
+            _realtime_frame_id = 1;
+        }
+        else
+        {
+            ++_realtime_frame_id;
+        }
+
+        // uint8_t payload_size = _item_count * sizeof(T);
+        // while (payload_size > CAN_FRAME_MAX_PAYLOAD - 2)
+        //{
+        //     payload_size = payload_size - sizeof(T);
+        // }
+        uint8_t payload_size = sizeof(T);
+        if (payload_size > CAN_FRAME_MAX_PAYLOAD - 2)
+            payload_size = 0;
+        uint8_t frame_data[CAN_FRAME_MAX_PAYLOAD - 1] = {0};
+        frame_data[0] = _realtime_frame_id;
+        memcpy(&(frame_data[1]), _data_fields, payload_size);
+
+        return _PrepareRawCanFrame(can_frame, error, CAN_FUNC_SET_REAL_TIME_IN, frame_data, payload_size + 1);
     }
 
     /// @brief Fills CAN frame with specified data
