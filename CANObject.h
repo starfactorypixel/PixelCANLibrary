@@ -1337,7 +1337,7 @@ private:
 
         if (_realtime_frame_id == UINT8_MAX)
         {
-            _realtime_frame_id = 1;
+            _realtime_frame_id = 0;
         }
         else
         {
