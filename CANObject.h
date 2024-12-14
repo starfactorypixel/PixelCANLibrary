@@ -873,7 +873,7 @@ public:
             if (IsObjectTypeSilent() && HasExternalFunctionSetRealtime() && !HasRealtimeError())
             {
                 if (can_frame.raw_data_length > 2 &&
-                    (can_frame.data[0] == _realtime_frame_id + 1 || _realtime_silent_should_ignore_frame_id_once))
+                    (_realtime_silent_should_ignore_frame_id_once || can_frame.data[0] == ++_realtime_frame_id))
                 {
                     _last_realtime_frame_time = can_frame.time_ms;
                     _realtime_silent_should_ignore_frame_id_once = false;
@@ -1335,14 +1335,7 @@ private:
             clear_can_frame_struct(can_frame);
         }
 
-        if (_realtime_frame_id == UINT8_MAX)
-        {
-            _realtime_frame_id = 0;
-        }
-        else
-        {
-            ++_realtime_frame_id;
-        }
+        ++_realtime_frame_id;
 
         // uint8_t payload_size = _item_count * sizeof(T);
         // while (payload_size > CAN_FRAME_MAX_PAYLOAD - 2)
