@@ -672,7 +672,7 @@ public:
             if (HasExternalFunctionSetRealtime() &&
                 !DoesRealtimeStopped() &&
                 _realtime_frame_interval > 0 &&
-                time - _last_realtime_frame_time >= _realtime_frame_interval * _realtime_frames_can_lost)
+                time - _last_realtime_frame_time >= (uint32_t)(_realtime_frame_interval * (_realtime_frames_can_lost + 1) + (_realtime_frame_interval >> 1))) // _realtime_frames_can_lost+1.5 interframe time interval
             {
                 _realtime_has_error = true;
                 _set_realtime_error_handler(time - _last_realtime_frame_time);
@@ -872,8 +872,7 @@ public:
             handler_result = CAN_RESULT_IGNORE;
             if (IsObjectTypeSilent() && HasExternalFunctionSetRealtime() && !HasRealtimeError())
             {
-                if (can_frame.raw_data_length > 2 &&
-                    (_realtime_silent_should_ignore_frame_id_once || can_frame.data[0] == ++_realtime_frame_id))
+                if (can_frame.raw_data_length > 2 && _IsCorrectNextRealtimeFrameId(can_frame.data[0]))
                 {
                     _last_realtime_frame_time = can_frame.time_ms;
                     _realtime_silent_should_ignore_frame_id_once = false;
@@ -881,7 +880,7 @@ public:
                     T data = *(T *)&can_frame.data[1];
                     SetValue(0, data);
                     handler_result = _set_realtime_handler(can_frame, error);
-                    if (data == *(T*)GetRealtimeZeroPoint())
+                    if (data == *(T *)GetRealtimeZeroPoint())
                     {
                         _realtime_stopped = true;
                     }
@@ -1213,6 +1212,15 @@ private:
         }
 
         return result;
+    }
+
+    /// @brief Checks if received frame ID is acceptable for real-time data listener
+    /// @param id_received ID of the real-time frame
+    /// @return 'true' if this ID is acceptable
+    bool _IsCorrectNextRealtimeFrameId(uint8_t id_received)
+    {
+        return _realtime_silent_should_ignore_frame_id_once ||
+               (id_received != _realtime_frame_id && (uint8_t)(id_received - _realtime_frame_id - 1) <= _realtime_frames_can_lost);
     }
 
     /// @brief Fills CAN frame with event specific data
