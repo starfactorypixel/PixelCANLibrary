@@ -14,7 +14,7 @@ public:
 
     /// @brief Registers an external handler for events. It will be called when event occurs.
     /// @param event_handler Pointer to the event handler.
-    /// @param error_delay_ms Delay for the error evends in milliseconds.
+    /// @param error_delay_ms Delay for the error events in milliseconds.
     /// @return CANObjectInterface reference
     virtual CANObjectInterface &RegisterFunctionEvent(event_handler_t event_handler, uint16_t error_delay_ms) = 0;
 
