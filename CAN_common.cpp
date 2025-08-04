@@ -58,6 +58,8 @@ void fill_can_frame_with_error_data(can_frame_t &can_frame, error_section_t erro
 /// @param block_sys_object Target CANObject
 void set_block_info_params(CANObjectInterface &block_sys_object)
 {
+    #warning "set_block_info_params whould be updated according to the new CANObjectInterface"
+    /*
     block_sys_object.SetTimerFloodMode(true);
     block_sys_object.SetTimerPeriod(15000);
     block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
@@ -66,6 +68,7 @@ void set_block_info_params(CANObjectInterface &block_sys_object)
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
     block_sys_object.RegisterFunctionTimer(nullptr);
+    */
 }
 
 /// @brief Common BlockHealth parameters will be applied to the specified CANObject.
@@ -76,6 +79,8 @@ void set_block_info_params(CANObjectInterface &block_sys_object)
 /// @param block_sys_object Target CANObject
 void set_block_health_params(CANObjectInterface &block_sys_object)
 {
+    #warning "set_block_health_params whould be updated according to the new CANObjectInterface"
+    /*
     block_sys_object.SetTimerFloodMode(false);
     block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
     block_sys_object.SetErrorEventDelay(300);
@@ -84,6 +89,7 @@ void set_block_health_params(CANObjectInterface &block_sys_object)
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
     block_sys_object.RegisterFunctionTimer(nullptr);
+    */
 };
 
 /// @brief Common BlockFeatures parameters will be applied to the specified CANObject.
@@ -95,6 +101,8 @@ void set_block_health_params(CANObjectInterface &block_sys_object)
 /// @param block_sys_object Target CANObject
 void set_block_features_params(CANObjectInterface &block_sys_object)
 {
+    #warning "set_block_features_params whould be updated according to the new CANObjectInterface"
+    /*
     block_sys_object.SetTimerFloodMode(true);
     block_sys_object.SetTimerPeriod(15000);
     block_sys_object.SetErrorEventDelay(CAN_ERROR_DISABLED);
@@ -103,6 +111,7 @@ void set_block_features_params(CANObjectInterface &block_sys_object)
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
     block_sys_object.RegisterFunctionTimer(nullptr);
+    */
 };
 
 /// @brief Common BlockError parameters will be applied to the specified CANObject.
@@ -113,6 +122,8 @@ void set_block_features_params(CANObjectInterface &block_sys_object)
 /// @param block_sys_object Target CANObject
 void set_block_error_params(CANObjectInterface &block_sys_object)
 {
+    #warning "set_block_error_params whould be updated according to the new CANObjectInterface"
+    /*
     block_sys_object.SetTimerFloodMode(false);
     block_sys_object.SetTimerPeriod(CAN_TIMER_DISABLED);
     block_sys_object.SetErrorEventDelay(300);
@@ -121,6 +132,7 @@ void set_block_error_params(CANObjectInterface &block_sys_object)
     block_sys_object.RegisterFunctionRequest(nullptr);
     block_sys_object.RegisterFunctionSet(nullptr);
     block_sys_object.RegisterFunctionTimer(nullptr);
+    */
 };
 
 /// @brief Debug logger function: decodes function ID to to human-readable string.
