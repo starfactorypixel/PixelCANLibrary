@@ -34,6 +34,21 @@ void clear_can_error_struct(can_error_t &error)
     error.error_code = 0;
 }
 
+/// @brief Fills the CAN-frame with specified error data (error section and error code)
+/// @param function_id
+/// @param error_section
+/// @param error_code
+void fill_can_frame_with_error_data(can_frame_t &can_frame, error_section_t error_section, uint8_t error_code, can_function_id_t function_id)
+{
+    clear_can_frame_struct(can_frame);
+    can_frame.initialized = true;
+    can_frame.function_id = function_id;
+    can_frame.data[0] = error_section;
+    can_frame.data[1] = error_code;
+    can_frame.raw_data_length = sizeof(can_frame.function_id) + 2;
+    can_frame.time_ms = 0;
+};
+
 /// @brief Common BlockInfo parameters will be applied to the specified CANObject.
 ///        All BlockInfo objects has:
 ///          - enabled timers (15000 ms period)
@@ -127,7 +142,7 @@ const char *get_function_name(can_function_id_t function_id)
 
     case CAN_FUNC_ACTION_IN:
         return "action: in";
-    
+
     case CAN_FUNC_SET_REAL_TIME_IN:
         return "set realtime: in";
 
@@ -213,8 +228,8 @@ const char *get_timer_type_name(timer_type_t timer_type)
     case CAN_TIMER_TYPE_CRITICAL:
         return "timer type: critical";
 
-    case CAN_TIMER_TYPE_MASK:
-        return "timer type: mask";
+    //case CAN_TIMER_TYPE_MASK:
+    //    return "timer type: mask";
     default:
         return "timer type: unknown";
     }
@@ -272,7 +287,7 @@ const char *get_object_type_name(object_type_t object_type)
 
     case CAN_OBJECT_TYPE_SYSTEM_BLOCK_ERROR:
         return "object type: system object - BlockError";
-    
+
     case CAN_OBJECT_TYPE_SILENT:
         return "object type: silent listener";
 
@@ -370,7 +385,7 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
 
         case ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME:
             return "error: section [CANObject], code [incoming CAN frame not initialized]";
-        
+
         case ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING:
             return "error: section [CANObject], code [hardware error code is missing]";
 
@@ -381,7 +396,7 @@ const char *get_error_code_name_for_section(error_section_t error_section, uint8
             return "error: section [CANObject], code [unknown]";
         }
         break;
-    
+
     case ERROR_SECTION_HARDWARE:
         return "error: section [hardware], code [description is hardware related]";
 

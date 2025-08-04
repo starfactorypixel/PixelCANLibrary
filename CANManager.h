@@ -1,65 +1,10 @@
 #pragma once
 
 #include <stdint.h>
-// #include <string.h>
+#include <string.h> //memcpy
 #include <cassert>
 #include "CAN_common.h"
-#include "CANObject.h"
-
-/******************************************************************************************
- *
- ******************************************************************************************/
-class CANManagerInterface
-{
-public:
-    virtual ~CANManagerInterface() = default;
-
-    /// @brief Registers specified CANObject
-    /// @param can_object CANObject for registration
-    /// @return 'true' if registration was successful, 'false' if not
-    virtual bool RegisterObject(CANObjectInterface &can_object) = 0;
-
-    /// @brief Returns the number of CANObjects, which are registered in CANManager
-    /// @return The number of CANObjects, which are registered in CANManager
-    virtual uint8_t GetObjectsCount() = 0;
-
-    /// @brief Checks if CANObject is registered in CANManager
-    /// @param id ID of the CANObject to check
-    /// @return Return 'true' if the CANObject is registered, 'false' if it is not
-    virtual bool HasCanObject(can_object_id_t id) = 0;
-
-    /// @brief Searches for the CANObject among the registered ones
-    /// @param id ID of the CANObject to search
-    /// @return 'pointer to CANObjectInterface' if this object is registered,
-    ///         'nullptr' if CANObject was not found.
-    virtual CANObjectInterface *GetCanObject(can_object_id_t id) = 0;
-
-    /// @brief Returns The number of CAN frames stored in the buffer.
-    /// @return The number of CAN frames stored in the buffer.
-    virtual uint8_t GetNumOfFramesInBuffer() = 0;
-
-    /// @brief Registers low level function, that sends data via CAN bus
-    /// @param can_send_func Pointer to the function
-    virtual void RegisterSendFunction(can_send_function_t can_send_func) = 0;
-
-    /// @brief Performs CANObjects processing
-    /// @param time Current time
-    virtual void Process(uint32_t time) = 0;
-
-    /// @brief Processes incoming CAN frame (without any queues?)
-    /// @param id CANObject ID from the CAN frame
-    /// @param data Pointer to the data array
-    /// @param length Data length
-    /// @return true if CANObject with ID is registered, false if not
-    virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) = 0;
-
-    /// @brief Sends custom CAN frame
-    /// @param can_object Sender CANObject. It is acceptable to use unregistered CANObject for generation of frames.
-    /// @param function_id CAN function ID
-    /// @param data Frame data to send in CAN frame
-    /// @param data_length Frame data length
-    virtual void SendCustomFrame(CANObjectInterface &can_object, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) = 0;
-};
+#include "CANObjectInterface.h"
 
 /******************************************************************************************
  ******************************************************************************************/
@@ -68,7 +13,7 @@ public:
 /// @tparam _can_frame_buffer_size — The size of buffer, measured in number of CAN frame structures
 /// @tparam tick_time — ms, the minimal period between CANManager::Process() informative calls
 template <uint8_t _max_objects = 16, uint8_t _can_frame_buffer_size = 16, uint8_t tick_time = 10>
-class CANManager : public CANManagerInterface
+class CANManager
 {
     static_assert(_max_objects > 0); // 0 objects is not allowed
 public:
@@ -83,7 +28,7 @@ public:
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
     /// @return 'true' if registration was successful, 'false' if not
-    virtual bool RegisterObject(CANObjectInterface &can_object) override
+    bool RegisterObject(CANObjectInterface &can_object)
     {
         if (_max_objects <= _objects_idx)
             return false;
@@ -93,17 +38,10 @@ public:
         return true;
     }
 
-    /// @brief Returns the number of CANObjects, which are registered in CANManager
-    /// @return The number of CANObjects, which are registered in CANManager
-    virtual uint8_t GetObjectsCount() override
-    {
-        return _objects_idx;
-    }
-
     /// @brief Checks if CANObject is registered in CANManager
     /// @param id ID of the CANObject to check
     /// @return Return 'true' if the CANObject is registered, 'false' if it is not
-    virtual bool HasCanObject(can_object_id_t id) override
+    bool HasCanObject(can_object_id_t id)
     {
         return GetCanObject(id) != nullptr;
     }
@@ -112,7 +50,7 @@ public:
     /// @param id ID of the CANObject to search
     /// @return 'pointer to CANObjectInterface' if this object is registered,
     ///         'nullptr' if CANObject was not found.
-    virtual CANObjectInterface *GetCanObject(can_object_id_t id) override
+    CANObjectInterface *GetCanObject(can_object_id_t id)
     {
         for (uint8_t i = 0; i < _objects_idx; i++)
         {
@@ -122,26 +60,9 @@ public:
         return nullptr;
     }
 
-    /// @brief Returns The number of CAN frames stored in the buffer.
-    /// @return The number of CAN frames stored in the buffer.
-    virtual uint8_t GetNumOfFramesInBuffer() override
-    {
-        return _frame_buffer_index;
-    }
-
-    /// @brief Registers low level function, that sends data via CAN bus
-    /// @param can_send_func Pointer to the function
-    virtual void RegisterSendFunction(can_send_function_t can_send_func) override
-    {
-        if (can_send_func == nullptr)
-            return;
-
-        _send_func = can_send_func;
-    }
-
     /// @brief Performs CANObjects processing
     /// @param time Current time
-    virtual void Process(uint32_t time) override
+    void Process(uint32_t time)
     {
         if (time - _last_tick < tick_time)
             return;
@@ -171,7 +92,7 @@ public:
                     {
                         clear_can_frame_struct(broadcast_can_frame);
                         copy_can_frame_struct(broadcast_can_frame, _can_frame_buffer[i]);
-                        if (CAN_RESULT_IGNORE == _objects[obj_idx]->InputCanFrame(broadcast_can_frame, _tx_error))
+                        if (CAN_RESULT_IGNORE == _objects[obj_idx]->InputCanFrame(broadcast_can_frame/*, TODO: outgoing_can_frame*/))
                             continue;
 
                         _ValidateAndFillErrorCanFrame(broadcast_can_frame, _tx_error);
@@ -189,7 +110,7 @@ public:
                     //     _can_frame_buffer[i].initialized = false;
                     //     continue;
                     // }
-                    if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], _tx_error))
+                    if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i]/*, TODO: outgoing_can_frame*/))
                     {
                         _can_frame_buffer[i].initialized = false;
                         continue;
@@ -210,7 +131,7 @@ public:
         // Process automatic functions of CANObjects
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
-            if (CAN_RESULT_IGNORE == _objects[i]->Process(time, _tx_can_frame, _tx_error))
+            if (CAN_RESULT_IGNORE == _objects[i]->Process(time, _tx_can_frame))
                 continue;
 
             _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
@@ -228,7 +149,7 @@ public:
     /// @param data Pointer to the data array
     /// @param length Data length
     /// @return true if data length exceeds 0 and a CANObject with the ID is registered, false if not
-    virtual bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length) override
+    bool IncomingCANFrame(can_object_id_t id, uint8_t *data, uint8_t length)
     {
         if (data == nullptr || length == 0)
             return false;
@@ -250,24 +171,6 @@ public:
 
         return true;
     }
-
-    /// @brief Sends custom CAN frame
-    /// @param can_object Sender CANObject. It is acceptable to use unregistered CANObject for generation of frames.
-    /// @param function_id CAN function ID
-    /// @param data Frame data to send in CAN frame
-    /// @param data_length Frame data length
-    virtual void SendCustomFrame(CANObjectInterface &can_object, can_function_id_t function_id, uint8_t *data = nullptr, uint8_t data_length = 0) override
-    {
-        clear_can_error_struct(_tx_error);
-        clear_can_frame_struct(_tx_can_frame);
-
-        can_object.FillRawCanFrame(_tx_can_frame, _tx_error, function_id, data, data_length);
-        _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
-
-        // restoring ID (if it was overwritten by the handler)
-        _tx_can_frame.object_id = can_object.GetId();
-        _SendCanData(_tx_can_frame);
-    };
 
 private:
     // data structures for outgoing CAN frames & errors

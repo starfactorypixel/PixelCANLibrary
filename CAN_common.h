@@ -1,5 +1,4 @@
-#ifndef CAN_COMMON_H
-#define CAN_COMMON_H
+#pragma once
 
 #include <stdint.h>
 
@@ -99,6 +98,7 @@ void clear_can_frame_struct(can_frame_t &can_frame);
 /// @param src_can_frame Source CAN frame
 void copy_can_frame_struct(can_frame_t &dest_can_frame, can_frame_t src_can_frame);
 
+/* ********* DEPRICATED *********
 enum timer_type_t : uint8_t
 {
     CAN_TIMER_TYPE_NONE = 0b00000000,
@@ -107,6 +107,15 @@ enum timer_type_t : uint8_t
     CAN_TIMER_TYPE_CRITICAL = 0b00000011,
 
     CAN_TIMER_TYPE_MASK = 0b00001111,
+};
+*/
+enum timer_type_t : uint8_t
+{
+    // Should be the same as function IDs
+    CAN_TIMER_TYPE_NONE = 0x00,
+    CAN_TIMER_TYPE_NORMAL = 0x61,
+    CAN_TIMER_TYPE_WARNING = 0x62,
+    CAN_TIMER_TYPE_CRITICAL = 0x63,
 };
 
 enum event_type_t : uint8_t
@@ -144,7 +153,14 @@ enum error_section_t : uint8_t
     ERROR_SECTION_HARDWARE = 0x03,
 };
 
-using error_code_hardware_t = uint8_t;
+enum error_code_manager_t : uint8_t
+{
+    ERROR_CODE_MANAGER_NONE = 0x00,
+    ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK = 0x01,
+
+    // NOTE: used for debug and as a temporary value; should not be used in release code
+    ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF,
+};
 
 enum error_code_object_t : uint8_t
 {
@@ -172,19 +188,12 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF,
 };
 
-enum error_code_manager_t : uint8_t
-{
-    ERROR_CODE_MANAGER_NONE = 0x00,
-    ERROR_CODE_MANAGER_CAN_FRAME_AND_ERROR_STRUCT_ARE_BOTH_BLANK = 0x01,
-
-    // NOTE: used for debug and as a temporary value; should not be used in release code
-    ERROR_CODE_MANAGER_SOMETHING_WRONG = 0xFF,
-};
+using error_code_hardware_t = uint8_t;
 
 struct can_error_t
 {
-    can_function_id_t function_id = CAN_FUNC_NONE;
-    error_section_t error_section = ERROR_SECTION_NONE;
+    can_function_id_t function_id = can_function_id_t::CAN_FUNC_NONE;
+    error_section_t error_section = error_section_t::ERROR_SECTION_NONE;
     uint8_t error_code = 0;
 };
 
@@ -214,6 +223,7 @@ using action_handler_t = can_result_t (*)(can_frame_t &can_frame, can_error_t &e
  * Common helper functions
  *
  *************************************************************************************************/
+void fill_can_frame_with_error_data(can_frame_t &can_frame, error_section_t error_section, uint8_t error_code, can_function_id_t function_id = can_function_id_t::CAN_FUNC_EVENT_ERROR);
 class CANObjectInterface;
 void set_block_info_params(CANObjectInterface &block_sys_object);
 void set_block_health_params(CANObjectInterface &block_sys_object);
@@ -231,5 +241,3 @@ const char *get_timer_type_name(timer_type_t timer_type);
 const char *get_event_type_name(event_type_t event_type);
 const char *get_object_type_name(object_type_t object_type);
 const char *get_error_code_name_for_section(error_section_t error_section, uint8_t error_code);
-
-#endif // CAN_COMMON_H

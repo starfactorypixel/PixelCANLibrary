@@ -1,10 +1,18 @@
-#ifndef CANLIBRARY_H
-#define CANLIBRARY_H
-
-#include "pix_utils.h"
+#pragma once
 
 #include "CAN_common.h"
-#include "CANManager.h"
-#include "CAN_common_block.h"
 
-#endif // CANLIBRARY_H
+#include "CANFunctionProactiveInterfaces.h"
+#include "CANFunctionTimerCheckerInterface.h"
+#include "CANFunctionTimerCheckerBase.h"
+#include "CANFunctionTimerCommonCheckers.h"
+#include "CANFunctionTimer.h"
+
+#include "CANFunctionReactiveInterfaces.h"
+#include "CANFunctionSet.h"
+#include "CANFunctionToggle.h"
+
+#include "CANObjectInterface.h"
+#include "CANObject.h"
+
+#include "CANManager.h"
