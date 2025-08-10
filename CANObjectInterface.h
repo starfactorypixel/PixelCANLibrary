@@ -5,6 +5,7 @@
 class CANFunctionReactiveInterface;
 class CANFunctionProactiveInterface;
 
+/// @brief Base interface for CAN objects
 class CANObjectInterface
 {
 public:
