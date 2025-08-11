@@ -35,19 +35,6 @@ private:
     }
 
 protected:
-    /// @brief Preprocessor stage. It is used to check the incoming CAN frame and prepare it for processing.
-    ///        If the preprocessor returns can_result_t::CAN_RESULT_IGNORE,
-    ///        it means that the incoming CAN frame was processed but nothing should be done according to that.
-    ///        If the preprocessor returns can_result_t::CAN_RESULT_ERROR,
-    ///        it means that the incoming CAN frame cannot be processed by this function,
-    ///        and the outgoing CAN frame will be filled with the error data.
-    ///        If the preprocessor returns can_result_t::CAN_RESULT_CAN_FRAME,
-    ///        it means that the incoming CAN frame can be processed by this function,
-    ///        and the outgoing CAN frame will be filled with the data.
-    /// @param can_object 
-    /// @param incoming_can_frame 
-    /// @param error_code 
-    /// @return 
     virtual can_result_t _CanFramePreprocessor(CANObjectInterface &can_object, const can_frame_t incoming_can_frame, error_code_object_t &error_code) = 0;
     virtual can_result_t _CanFrameProcessor(CANObjectInterface &can_object, const can_frame_t incoming_can_frame, can_frame_t &outgoing_can_frame) = 0;
     virtual can_result_t _CanFramePostprocessor(CANObjectInterface &can_object, can_frame_t &outgoing_can_frame) = 0;
