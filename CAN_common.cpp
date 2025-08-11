@@ -196,22 +196,6 @@ const char *get_function_name(can_function_id_t function_id)
     case CAN_FUNC_FIRST_OUT_ERR:
         return "correct other: some first value";
 
-    case CAN_FUNC_SEND_RAW_INIT_IN:
-    case CAN_FUNC_SEND_RAW_INIT_OUT_OK:
-    case CAN_FUNC_SEND_RAW_INIT_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_OK:
-    case CAN_FUNC_SEND_RAW_CHUNK_START_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_DATA_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_IN:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_OK:
-    case CAN_FUNC_SEND_RAW_CHUNK_END_OUT_ERR:
-    case CAN_FUNC_SEND_RAW_FINISH_IN:
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_OK:
-    case CAN_FUNC_SEND_RAW_FINISH_OUT_ERR:
-        return "correct other: some send raw function";
-
     default:
         return "unknown";
     }
