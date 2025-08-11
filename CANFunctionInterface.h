@@ -15,12 +15,12 @@ protected:
     /// @brief  Function callback
     ///         It is called after the function is executed.
     /// @param parent_can_object - CAN object which called this function
-    /// @return can_result_t - result of the function execution
-    virtual can_result_t _FunctionCallBack(CANObjectInterface &parent_can_object)
+    /// @return void
+    ///         Default implementation does nothing
+    ///         This method can be overridden by derived classes to provide specific functionality.
+    virtual void _FunctionCallBack(CANObjectInterface &parent_can_object)
     {
-        // Default implementation does nothing
-        // It can be overridden by derived classes to provide specific functionality
-        return can_result_t::CAN_RESULT_IGNORE;
+        return;
     }
 
 
