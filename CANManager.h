@@ -110,7 +110,7 @@ public:
                         continue;
 
                     _ValidateAndFillErrorCanFrame(outgoing_can_frame, _tx_error);
-                    outgoing_can_frame.object_id = _objects[obj_idx]->GetId();
+                    outgoing_can_frame.object_id = can_object->GetId();
                     _SendCanData(outgoing_can_frame);
                 }
                 _can_frame_buffer[i].initialized = false;
