@@ -173,9 +173,6 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
     ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING = 0x12,
 
-    ERROR_CODE_OBJECT_FUNCTION_PREPROCESSOR_ERROR = 0x20,
-    ERROR_CODE_OBJECT_FUNCTION_POSTPROCESSOR_ERROR = 0x21,
-
     // NOTE: used for debug and as a temporary value; should not be used in release code
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF,
 };

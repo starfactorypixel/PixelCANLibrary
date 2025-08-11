@@ -35,12 +35,16 @@ private:
     }
 
 protected:
-    virtual can_result_t _CanFramePreprocessor(CANObjectInterface &can_object, const can_frame_t incoming_can_frame, error_code_object_t &error_code) = 0;
-    virtual can_result_t _CanFrameProcessor(CANObjectInterface &can_object, const can_frame_t incoming_can_frame, can_frame_t &outgoing_can_frame) = 0;
-    virtual can_result_t _CanFramePostprocessor(CANObjectInterface &can_object, can_frame_t &outgoing_can_frame) = 0;
+    /// @brief Processing stage, without any processing by default
+    virtual can_result_t _CanFrameProcessor(CANObjectInterface &can_object, const can_frame_t incoming_can_frame, can_frame_t &outgoing_can_frame)
+    {
+        // With CAN_RESULT_IGNORE, the processing will be passed to the next function in the chain
+        return can_result_t::CAN_RESULT_IGNORE;
+    }
 
 public:
-    CANFunctionReactiveInterface() : _next_reactive_function(nullptr) {};
+    CANFunctionReactiveInterface() : CANFunctionInterface(can_function_id_t::CAN_FUNC_NONE), _next_reactive_function(nullptr) {};
+    CANFunctionReactiveInterface(can_function_id_t function_id) : CANFunctionInterface(function_id), _next_reactive_function(nullptr) {};
     virtual ~CANFunctionReactiveInterface() = default;
 
     /// @brief Sets next reactive function in the chain of responsibility
@@ -70,24 +74,6 @@ public:
 
         clear_can_frame_struct(outgoing_can_frame);
 
-        // Preprocessor stage
-        // It is used to check if the incoming CAN frame can be processed by this function
-        error_code_object_t error_code = error_code_object_t::ERROR_CODE_OBJECT_NONE;
-        switch (this->_CanFramePreprocessor(parent_can_object, incoming_can_frame, error_code))
-        {
-        case can_result_t::CAN_RESULT_IGNORE:
-            break;
-
-        case can_result_t::CAN_RESULT_ERROR:
-        case can_result_t::CAN_RESULT_CAN_FRAME:
-        default:
-            if (error_code == error_code_object_t::ERROR_CODE_OBJECT_NONE)
-                error_code = error_code_object_t::ERROR_CODE_OBJECT_FUNCTION_PREPROCESSOR_ERROR;
-            fill_can_frame_with_error_data(outgoing_can_frame, ERROR_SECTION_CAN_OBJECT, error_code);
-            outgoing_can_frame.object_id = parent_can_object.GetId();
-            return can_result_t::CAN_RESULT_CAN_FRAME;
-        }
-
         // Processing stage
         // It is used to process the incoming CAN frame and generate an outgoing CAN frame
         // If the processing is successful, the outgoing CAN frame will be filled with the data
@@ -99,34 +85,18 @@ public:
             return this->_CallNextFunction(parent_can_object, incoming_can_frame, outgoing_can_frame);
 
         case can_result_t::CAN_RESULT_CAN_FRAME:
-            outgoing_can_frame.object_id = parent_can_object.GetId();
             break;
 
         case can_result_t::CAN_RESULT_ERROR:
         default:
-            fill_can_frame_with_error_data(outgoing_can_frame, ERROR_SECTION_CAN_OBJECT, ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW);
-            outgoing_can_frame.object_id = parent_can_object.GetId();
-            return can_result_t::CAN_RESULT_CAN_FRAME;
-        }
-
-        // Postprocessor stage
-        // It is used to perform additional actions after the processing of the incoming CAN frame
-        // Here we can modify the outgoing CAN frame or perform additional checks
-        switch (this->_CanFramePostprocessor(parent_can_object, outgoing_can_frame))
-        {
-        case can_result_t::CAN_RESULT_IGNORE:
-            return this->_CallNextFunction(parent_can_object, incoming_can_frame, outgoing_can_frame);
-
-        case can_result_t::CAN_RESULT_CAN_FRAME:
+            if(!outgoing_can_frame.initialized)
+                fill_can_frame_with_error_data(outgoing_can_frame, ERROR_SECTION_CAN_OBJECT, ERROR_CODE_OBJECT_INCORRECT_FUNCTION_WORKFLOW);
             break;
-
-        case can_result_t::CAN_RESULT_ERROR:
-        default:
-            fill_can_frame_with_error_data(outgoing_can_frame, ERROR_SECTION_CAN_OBJECT, ERROR_CODE_OBJECT_FUNCTION_POSTPROCESSOR_ERROR);
-            outgoing_can_frame.object_id = parent_can_object.GetId();
-            return CAN_RESULT_CAN_FRAME;
         }
 
+        this->_FunctionCallBack(parent_can_object);
+
+        outgoing_can_frame.object_id = parent_can_object.GetId();
         return can_result_t::CAN_RESULT_CAN_FRAME;
     };
 };
