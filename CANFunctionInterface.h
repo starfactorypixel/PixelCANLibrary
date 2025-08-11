@@ -10,13 +10,27 @@ class CANFunctionInterface
 private:
     /// @brief Function ID of the CAN function
     can_function_id_t _function_id = can_function_id_t::CAN_FUNC_NONE;
+
+protected:
+    /// @brief  Function callback
+    ///         It is called after the function is executed.
+    /// @param parent_can_object - CAN object which called this function
+    /// @return can_result_t - result of the function execution
+    virtual can_result_t _FunctionCallBack(CANObjectInterface &parent_can_object)
+    {
+        // Default implementation does nothing
+        // It can be overridden by derived classes to provide specific functionality
+        return can_result_t::CAN_RESULT_IGNORE;
+    }
+
+
 public:
     CANFunctionInterface() : _function_id(can_function_id_t::CAN_FUNC_NONE) {};
     CANFunctionInterface(can_function_id_t function_id) : _function_id(function_id) {};
     virtual ~CANFunctionInterface() = default;
 
     /// @brief Sets the function ID of the CAN function
-    /// @param function_id  
+    /// @param function_id
     /// @return Reference to the current CANFunctionInterface object
     ///         This allows for method chaining.
     CANFunctionInterface &SetFunctionID(can_function_id_t function_id)
