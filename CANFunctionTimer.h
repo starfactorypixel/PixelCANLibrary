@@ -21,6 +21,9 @@ private:
     CANFunctionTimerCheckerInterface *_type_checker = nullptr;
 
 public:
+    CANFunctionTimer() : CANFunctionProactiveInterface(), _last_call(0), _period_ms(0), _is_enabled(false), _default_type(CAN_TIMER_TYPE_NONE), _type_checker(nullptr) {};
+    ~CANFunctionTimer() = default;
+
     /// @brief Checks if the timer is enabled.
     /// @return true if the timer is enabled and the period is greater than zero, false otherwise.
     bool IsEnabled() { return _is_enabled && _period_ms > 0; };
@@ -80,7 +83,7 @@ public:
 
     /// @brief Sets the type checker for the timer function.
     ///        This method allows you to specify a type checker.
-    ///        The type checker is an object thet implements the CANFunctionTimerCheckerInterface and 
+    ///        The type checker is an object thet implements the CANFunctionTimerCheckerInterface and
     ///        is used to determine the timer type based on the values of the CAN object.
     /// @param type_checker - Pointer to the type checker that implements the CANFunctionTimerCheckerInterface.
     /// @return Reference to the current instance of CANFunctionTimer for method chaining.

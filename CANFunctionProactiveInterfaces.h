@@ -2,11 +2,12 @@
 
 #include "CAN_common.h"
 #include "CANObjectInterface.h"
+#include "CANFunctionInterface.h"
 
 /// @brief CANFunctionProactiveInterface is an interface for proactive functions
 ///        It is used to process CAN frames proactively, without waiting for incoming frames.
 ///        It is used to implement periodic tasks or tasks that should be executed at a specific time
-class CANFunctionProactiveInterface
+class CANFunctionProactiveInterface : public CANFunctionInterface
 {
 private:
     /// @brief Pointer to the next proactive function in the chain of responsibility
@@ -17,7 +18,7 @@ private:
     CANFunctionProactiveInterface *_next_proactive_function = nullptr;
 
 public:
-    CANFunctionProactiveInterface() : _next_proactive_function(nullptr) {};
+    CANFunctionProactiveInterface() : CANFunctionInterface(), _next_proactive_function(nullptr) {};
     virtual ~CANFunctionProactiveInterface() = default;
 
     /// @brief Sets next proactive function in the chain of responsibility

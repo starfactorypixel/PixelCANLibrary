@@ -10,7 +10,7 @@
 ///        and returns the timer type. It is the only method that should be called from outside the class.
 class CANFunctionTimerCheckerInterface
 {
-private:
+protected:
     /// @brief Determines the most critical timer type of two timer types.
     ///        This method is used to combine two timer types into one.
     /// @param value1 First timer type

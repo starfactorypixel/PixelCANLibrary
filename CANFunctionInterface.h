@@ -12,6 +12,7 @@ private:
     can_function_id_t _function_id = can_function_id_t::CAN_FUNC_NONE;
 public:
     CANFunctionInterface() : _function_id(can_function_id_t::CAN_FUNC_NONE) {};
+    CANFunctionInterface(can_function_id_t function_id) : _function_id(function_id) {};
     virtual ~CANFunctionInterface() = default;
 
     /// @brief Sets the function ID of the CAN function
