@@ -6,8 +6,6 @@
 #include "CAN_common.h"
 #include "CANObjectInterface.h"
 
-/******************************************************************************************
- ******************************************************************************************/
 /// @brief CANManager manages all the CANObject of the board/system and performs base frame processing
 /// @tparam _max_objects — The maximum number of CANObjects which can be handle by CANManager
 /// @tparam _can_frame_buffer_size — The size of buffer, measured in number of CAN frame structures
@@ -23,7 +21,7 @@ public:
     /// @brief Creates CANManager and specifies external function, which sends CAN frames
     /// @param can_send_func Pointer to an external CAN frames sending handler
     CANManager(can_send_function_t can_send_func)
-        : _send_func(can_send_func){};
+        : _send_func(can_send_func) {};
 
     /// @brief Registers specified CANObject
     /// @param can_object CANObject for registration
@@ -69,12 +67,15 @@ public:
 
         _last_tick = time;
 
+        can_frame_t outgoing_can_frame;
+
         // Process all incoming CAN frames in the buffer
         if (_frame_buffer_index > 0)
         {
             CANObjectInterface *can_object = nullptr;
             for (uint8_t i = 0; i < _frame_buffer_index; i++)
             {
+
                 // set time for canframe (assume CAN frame comes now)
                 _can_frame_buffer[i].time_ms = time;
 
@@ -82,68 +83,61 @@ public:
                 if (_can_frame_buffer[i].object_id == CAN_SYSTEM_ID_BROADCAST)
                 {
                     if (!_IsBroadcastFunctionAllowed(_can_frame_buffer[i].function_id))
-                    {
-                        _can_frame_buffer[i].initialized = false;
                         continue;
-                    }
 
                     can_frame_t broadcast_can_frame;
                     for (uint8_t obj_idx = 0; obj_idx < _objects_idx; ++obj_idx)
                     {
                         clear_can_frame_struct(broadcast_can_frame);
+                        clear_can_frame_struct(outgoing_can_frame);
                         copy_can_frame_struct(broadcast_can_frame, _can_frame_buffer[i]);
-                        if (CAN_RESULT_IGNORE == _objects[obj_idx]->InputCanFrame(broadcast_can_frame/*, TODO: outgoing_can_frame*/))
+                        if (CAN_RESULT_IGNORE == _objects[obj_idx]->InputCanFrame(broadcast_can_frame, outgoing_can_frame))
                             continue;
 
-                        _ValidateAndFillErrorCanFrame(broadcast_can_frame, _tx_error);
-                        broadcast_can_frame.object_id = _objects[obj_idx]->GetId();
-                        _SendCanData(broadcast_can_frame);
+                        _ValidateAndFillErrorCanFrame(outgoing_can_frame, _tx_error);
+                        outgoing_can_frame.object_id = _objects[obj_idx]->GetId();
+                        _SendCanData(outgoing_can_frame);
                     }
                 }
                 // process all frames for specific CAN-Objects
                 else
                 {
                     can_object = GetCanObject(_can_frame_buffer[i].object_id);
-                    // don't check for nullptr here because existing of the object was checked in IncomingCANFrame()
-                    // if (can_object == nullptr)
-                    // {
-                    //     _can_frame_buffer[i].initialized = false;
-                    //     continue;
-                    // }
-                    if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i]/*, TODO: outgoing_can_frame*/))
-                    {
-                        _can_frame_buffer[i].initialized = false;
+                    if (can_object == nullptr)
                         continue;
-                    }
+                    clear_can_frame_struct(outgoing_can_frame);
+                    if (CAN_RESULT_IGNORE == can_object->InputCanFrame(_can_frame_buffer[i], outgoing_can_frame))
+                        continue;
 
-                    _ValidateAndFillErrorCanFrame(_can_frame_buffer[i], _tx_error);
-                    _SendCanData(_can_frame_buffer[i]);
+                    _ValidateAndFillErrorCanFrame(outgoing_can_frame, _tx_error);
+                    outgoing_can_frame.object_id = _objects[obj_idx]->GetId();
+                    _SendCanData(outgoing_can_frame);
                 }
                 _can_frame_buffer[i].initialized = false;
             }
-            // buffer is clear, we can write frame in the first item of buffer
+            // buffer is clear, we can write new frame(s) at the first position of buffer
             _frame_buffer_index = 0;
         }
 
         clear_can_error_struct(_tx_error);
-        clear_can_frame_struct(_tx_can_frame);
+        clear_can_frame_struct(outgoing_can_frame);
 
         // Process automatic functions of CANObjects
         for (uint8_t i = 0; i < _objects_idx; ++i)
         {
-            if (CAN_RESULT_IGNORE == _objects[i]->Process(time, _tx_can_frame))
+            if (CAN_RESULT_IGNORE == _objects[i]->Process(time, outgoing_can_frame))
                 continue;
 
-            _ValidateAndFillErrorCanFrame(_tx_can_frame, _tx_error);
+            _ValidateAndFillErrorCanFrame(outgoing_can_frame, _tx_error);
 
             // restoring ID (if it was overwritten by the handler)
-            _tx_can_frame.object_id = _objects[i]->GetId();
+            outgoing_can_frame.object_id = _objects[i]->GetId();
 
-            _SendCanData(_tx_can_frame);
+            _SendCanData(outgoing_can_frame);
         }
     }
 
-    /// @brief Stores incoming CAN framein the buffer.
+    /// @brief Stores incoming CAN frame in the buffer.
     ///        Frame processing will start when the Process() method is called the next time.
     /// @param id CANObject ID from the CAN frame
     /// @param data Pointer to the data array
@@ -173,8 +167,7 @@ public:
     }
 
 private:
-    // data structures for outgoing CAN frames & errors
-    can_frame_t _tx_can_frame = {};
+    // data structure for outgoing error CAN frame
     can_error_t _tx_error = {};
 
     // buffer for incoming can frames
@@ -202,7 +195,6 @@ private:
         _send_func(can_frame.object_id, can_frame.raw_data, can_frame.raw_data_length);
 
         clear_can_error_struct(_tx_error);
-        clear_can_frame_struct(_tx_can_frame);
     }
 
     /// @brief Fills CAN frame with correct error data

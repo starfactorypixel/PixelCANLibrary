@@ -98,17 +98,6 @@ void clear_can_frame_struct(can_frame_t &can_frame);
 /// @param src_can_frame Source CAN frame
 void copy_can_frame_struct(can_frame_t &dest_can_frame, can_frame_t src_can_frame);
 
-/* ********* DEPRICATED *********
-enum timer_type_t : uint8_t
-{
-    CAN_TIMER_TYPE_NONE = 0b00000000,
-    CAN_TIMER_TYPE_NORMAL = 0b00000001,
-    CAN_TIMER_TYPE_WARNING = 0b00000010,
-    CAN_TIMER_TYPE_CRITICAL = 0b00000011,
-
-    CAN_TIMER_TYPE_MASK = 0b00001111,
-};
-*/
 enum timer_type_t : uint8_t
 {
     // Should be the same as function IDs
@@ -183,6 +172,9 @@ enum error_code_object_t : uint8_t
     ERROR_CODE_OBJECT_LOCKED = 0x10,
     ERROR_CODE_OBJECT_BAD_INCOMING_CAN_FRAME = 0x11,
     ERROR_CODE_OBJECT_HARDWARE_ERROR_CODE_IS_MISSING = 0x12,
+
+    ERROR_CODE_OBJECT_FUNCTION_PREPROCESSOR_ERROR = 0x20,
+    ERROR_CODE_OBJECT_FUNCTION_POSTPROCESSOR_ERROR = 0x21,
 
     // NOTE: used for debug and as a temporary value; should not be used in release code
     ERROR_CODE_OBJECT_SOMETHING_WRONG = 0xFF,
