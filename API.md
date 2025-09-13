@@ -140,7 +140,7 @@ class myInOut8: public CANObject<uint8_t, 1>
   private:
     uint8_t _port = 1;
   public:
-    myInOut(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
+    myInOut8(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
@@ -150,7 +150,7 @@ class myInOut16: public CANObject<uint16_t, 1>
   private:
     uint8_t _port = 1;
   public:
-    myInOut(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
+    myInOut16(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
@@ -160,7 +160,7 @@ myInOut8 can_object_out1(0x0164, 1);
 myInOut8 can_object_out2(0x0165, 2);
 myInOut8 can_object_out3(0x0166, 3);
 // 0x0164	Out1	set | toggle | request | event	---	uint8_t	00 || FF	1 + 1	{ type[0] } or { type[0] data[1] }		Выход 1
-myInOut16 can_object_in1(0x016C, 1);
+myInOut16 can_object_in1(0x016C, 100, 1);	// 100 - Установка таймеров. Здесь?
 
 
 // obj.SetValue(); Не использовать
