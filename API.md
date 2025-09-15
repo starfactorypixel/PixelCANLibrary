@@ -140,7 +140,7 @@ class myOut8: public CANObject<uint8_t, 1>
   private:
     uint8_t _port = 1;
   public:
-    myOut8(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
+	myOut8(can_object_id_t id, uint8_t port) : CANObject<uint8_t, 1>(id), _port(port) {};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
@@ -150,7 +150,7 @@ class myIn16: public CANObject<uint16_t, 1>
   private:
     uint8_t _port = 1;
   public:
-    myIn16(can_object_id_t id, uint8_t port) : _port(port), CANObject(id){};
+	myIn16(can_object_id_t id, uint8_t port) : CANObject<uint16_t, 1>(id), _port(port) {};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
