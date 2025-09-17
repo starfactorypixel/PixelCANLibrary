@@ -74,50 +74,50 @@
 
 class MySetFunc : public CANFunctionSet
 {
-	protected:
-		virtual void _FunctionCallBack(CANObjectInterface &parent_can_object, int32_t user_id) override
-		{
-			uint8_t val = parent_can_object.GetValue(0);
-			//
+    protected:
+        virtual void _FunctionCallBack(CANObjectInterface &parent_can_object, int32_t user_id) override
+        {
+            uint8_t val = parent_can_object.GetValue(0);
+            //
 
-			Power::obj.Set(user_id, val);
-			bool result = Power::obj.On(user_id);
-			if(result)
-			{
-				// Генерирует event ok
-			}
-			else
-			{
-				// Генерирует event error
-			}
+            Power::obj.Set(user_id, val);
+            bool result = Power::obj.On(user_id);
+            if(result)
+            {
+                // Генерирует event ok
+            }
+            else
+            {
+                // Генерирует event error
+            }
 
-			return code;
-		}
+            return code;
+        }
 };
 
 CANManager<16> can_manager();
 CANObject<uint8_t, 1> can_object_1(0x0164);
 CANObject<uint8_t, 1> can_object_2(0x0165);
 CANObject<uint8_t, 1> can_object_3(0x0166);
-// 0x0164	Out1	set | toggle | request | event	---	uint8_t	00 || FF	1 + 1	{ type[0] } or { type[0] data[1] }		Выход 1
+// 0x0164    Out1    set | toggle | request | event    ---    uint8_t    00 || FF    1 + 1    { type[0] } or { type[0] data[1] }        Выход 1
 //CANFunctionSet set_function();
 //CANFunctionToggle toggle_function();
 MySetFunc mysetfunc();
 
 void setup()
 {
-	can_manager.AddObj(can_object_1);
-	can_manager.AddObj(can_object_2);
-	can_manager.AddObj(can_object_3);
-	
-	can_object_1.RegisterReactiveFunction(mysetfunc, 1);
-	can_object_2.RegisterReactiveFunction(mysetfunc, 2);
-	can_object_3.RegisterReactiveFunction(mysetfunc, 3);
+    can_manager.AddObj(can_object_1);
+    can_manager.AddObj(can_object_2);
+    can_manager.AddObj(can_object_3);
+    
+    can_object_1.RegisterReactiveFunction(mysetfunc, 1);
+    can_object_2.RegisterReactiveFunction(mysetfunc, 2);
+    can_object_3.RegisterReactiveFunction(mysetfunc, 3);
 }
 
 void loop()
 {
-	can_manager.Tick(millis());
+    can_manager.Tick(millis());
 }
 ```
 
@@ -140,7 +140,7 @@ class myOut8: public CANObject<uint8_t, 1>
   private:
     uint8_t _port = 1;
   public:
-	myOut8(can_object_id_t id, uint8_t port) : CANObject<uint8_t, 1>(id), _port(port) {};
+    myOut8(can_object_id_t id, uint8_t port) : CANObject<uint8_t, 1>(id), _port(port) {};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
@@ -150,7 +150,7 @@ class myIn16: public CANObject<uint16_t, 1>
   private:
     uint8_t _port = 1;
   public:
-	myIn16(can_object_id_t id, uint8_t port) : CANObject<uint16_t, 1>(id), _port(port) {};
+    myIn16(can_object_id_t id, uint8_t port) : CANObject<uint16_t, 1>(id), _port(port) {};
     uint8_t GetPort() { return _port; };
     void SetPort(uint8_t port) { _port = port; };
 }
@@ -159,93 +159,224 @@ CANManager<16> can_manager();
 myOut8 can_object_out1(0x0164, 1);
 myOut8 can_object_out2(0x0165, 2);
 myOut8 can_object_out3(0x0166, 3);
-// 0x0164	Out1	set | toggle | request | event	---	uint8_t	00 || FF	1 + 1	{ type[0] } or { type[0] data[1] }		Выход 1
-myIn16 can_object_in1(0x016C, 100, 1);	// 100 - Установка таймеров. Здесь? Или в RegisterProactive* ?
+// 0x0164    Out1    set | toggle | request | event    ---    uint8_t    00 || FF    1 + 1    { type[0] } or { type[0] data[1] }        Выход 1
+myIn16 can_object_in1(0x016C, 100, 1);    // 100 - Установка таймеров. Здесь? Или в RegisterProactive* ?
 
 
 // obj.SetValue(); Не использовать
 void MyCallbackReactive(const CANObjectInterface &obj/*, const CANFrame_t &rx, CANFrame_t &tx*/)
 {
-	myOut8 *myobj = (myOut8 *)&obj;
-	uint8_t val = myobj.GetValue(0);
-	uint8_t port = myobj.GetPort();
-	
-	bool result;
-	switch(myobj.Getfuncid())
-	{
-		case 0x01:
-			Power::obj.Set(port, val);
-			result = Power::obj.On(port);
-			break;
-		
-		case 0x02:
-			Power::obj.Toggle(port, val);
-			result = Power::obj.On(port);
-			break;
-	}
+    myOut8 *myobj = (myOut8 *)&obj;
+    uint8_t val = myobj.GetValue(0);
+    uint8_t port = myobj.GetPort();
+    
+    bool result;
+    switch(myobj.Getfuncid())
+    {
+        case 0x01:
+            Power::obj.Set(port, val);
+            result = Power::obj.On(port);
+            break;
+        
+        case 0x02:
+            Power::obj.Toggle(port, val);
+            result = Power::obj.On(port);
+            break;
+    }
 
-	myobj.Setfuncid() = (result) ? 0x65 : 0xE6;
-	myobj.SetValue(....);
-	//myobj.Setinitialized() = true;
+    myobj.Setfuncid() = (result) ? 0x65 : 0xE6;
+    myobj.SetValue(....);
+    //myobj.Setinitialized() = true;
 }
 
 
 // obj.SetValue(); Не использовать
 void MyCallbackProactiveTimer(const CANObjectInterface &obj, const uint32_t time/*, CANFrame_t &tx*/)
 {
-	myIn16 *myobj = (myIn16 *)&obj;
-	uint8_t port = myobj->GetPort();
+    myIn16 *myobj = (myIn16 *)&obj;
+    uint8_t port = myobj->GetPort();
 
-	uint16_t val = Analog::obj.Read(port);
-	myobj.Setfuncid() = (val < 50) ? 0x61 : 0x63;
-	myobj.SetValue(val);
-	//myobj.Setinitialized() = true;
+    uint16_t val = Analog::obj.Read(port);
+    myobj.Setfuncid() = (val < 50) ? 0x61 : 0x63;
+    myobj.SetValue(val);
+    //myobj.Setinitialized() = true;
 
 
-	// Как делать event от железа ????
-	// по маленькому значению таймера
+    // Как делать event от железа ????
+    // по маленькому значению таймера
 }
 
 void MyCallbackProactiveEvent(const CANObjectInterface &obj, const uint32_t time/*, CANFrame_t &tx*/)
 {
-	myIn16 *myobj = (myIn16 *)&obj;
-	uint8_t port = myobj->GetPort();
+    myIn16 *myobj = (myIn16 *)&obj;
+    uint8_t port = myobj->GetPort();
 
-	uint16_t val = Analog::obj.GetEvent(port);
-	myobj.Setfuncid() = (val < 50) ? 0x65 : 0xE6;
-	myobj.SetValue(val);
-	//myobj.Setinitialized() = true;
+    uint16_t val = Analog::obj.GetEvent(port);
+    myobj.Setfuncid() = (val < 50) ? 0x65 : 0xE6;
+    myobj.SetValue(val);
+    //myobj.Setinitialized() = true;
 
 
-	// Как делать event от железа ????
-	// по маленькому значению таймера
+    // Как делать event от железа ????
+    // по маленькому значению таймера
 }
 
 
 void setup()
 {
-	can_manager.AddObj(can_object_out1);
-	can_manager.AddObj(can_object_out2);
-	can_manager.AddObj(can_object_out3);
-	
-	can_object_out1.RegisterReactiveCallback(MyCallbackReactive);
-	can_object_out2.RegisterReactiveCallback(MyCallbackReactive);
-	can_object_out3.RegisterReactiveCallback(MyCallbackReactive);
+    can_manager.AddObj(can_object_out1);
+    can_manager.AddObj(can_object_out2);
+    can_manager.AddObj(can_object_out3);
+    
+    can_object_out1.RegisterReactiveCallback(MyCallbackReactive);
+    can_object_out2.RegisterReactiveCallback(MyCallbackReactive);
+    can_object_out3.RegisterReactiveCallback(MyCallbackReactive);
 
-	can_object_in1.RegisterProactiveTimerCallback(MyCallbackProactiveTimer, 100);	// Интервал таймера
-	can_object_in1.RegisterProactiveEventCallback(MyCallbackProactiveEvent, 25);	// Интервал эвента
+    can_object_in1.RegisterProactiveTimerCallback(MyCallbackProactiveTimer, 100);    // Интервал таймера
+    can_object_in1.RegisterProactiveEventCallback(MyCallbackProactiveEvent, 25);    // Интервал эвента
 
 /*
-	// Прикольно но нужно ли?
-	can_object_out3.RegisterCallback(MyCallback);
-	can_object_out3.RegisterCallback(MyCallback, FuncID);
-	can_object_out3.RegisterCallbackEx(MyCallback, FuncID_MASK);	// Битовая маска
-	can_object_out3.RegisterCallbackEx(MyCallback, FuncID_FROM, FuncID_TO);
+    // Прикольно но нужно ли?
+    can_object_out3.RegisterCallback(MyCallback);
+    can_object_out3.RegisterCallback(MyCallback, FuncID);
+    can_object_out3.RegisterCallbackEx(MyCallback, FuncID_MASK);    // Битовая маска
+    can_object_out3.RegisterCallbackEx(MyCallback, FuncID_FROM, FuncID_TO);
 */
 }
 
 void loop()
 {
-	can_manager.Tick(millis());
+    can_manager.Tick(millis());
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Мысли-фигисли
+```cpp
+class myOut8: public CANObject<uint8_t, 1>
+{
+  private:
+    uint8_t _port = 1;
+
+  protected:
+    void reactiveCallback()
+    {
+        uint8_t val = this->GetValue(0);
+        // uint8_t port = this->GetPort();
+        
+        bool result;
+        switch(this->GetFuncID())
+        {
+            case 0x01:
+                Power::obj.Set(_port, val);
+                result = Power::obj.On(_port);
+                break;
+            
+            case 0x02:
+                Power::obj.Toggle(_port, val);
+                result = Power::obj.On(_port);
+                break;
+        }
+
+        this->SetFuncID() = (result) ? 0x65 : 0xE6;
+        this->SetValue(....);
+        //this->SetInitialized() = true;
+
+    }
+
+  public:
+    myOut8(can_object_id_t id, uint8_t port) : CANObject<uint8_t, 1>(id), _port(port) {};
+    uint8_t GetPort() { return _port; };
+    void SetPort(uint8_t port) { _port = port; };
+}
+
+class myIn16: public CANObject<uint16_t, 1>
+{
+  private:
+    uint8_t _port = 1;
+  
+  protected:
+    void proactiveCallbackTimer(const uint32_t time)
+    {
+        uint16_t val = Analog::obj.Read(this->GetPort());
+        this->SetFuncID() = (val < 50) ? 0x61 : 0x63;
+        this->SetValue(val);
+        //this->SetInitialized() = true;
+
+
+        // Как делать event от железа ????
+        // по маленькому значению таймера
+    }
+
+    void proactiveCallbackEvent(const uint32_t time)
+    {
+        uint16_t val = Analog::obj.GetEvent(_port);
+        this->SetFuncID() = (val < 50) ? 0x65 : 0xE6;
+        this->SetValue(val);
+        //this->SetInitialized() = true;
+
+
+        // Как делать event от железа ????
+        // по маленькому значению таймера
+    }
+
+  public:
+    myIn16(can_object_id_t id, uint8_t port) : CANObject<uint16_t, 1>(id), _port(port) {};
+    uint8_t GetPort() { return _port; };
+    void SetPort(uint8_t port) { _port = port; };
+}
+
+CANManager<16> can_manager();
+myOut8 can_object_out1(0x0164, 1);
+myOut8 can_object_out2(0x0165, 2);
+myOut8 can_object_out3(0x0166, 3);
+// 0x0164    Out1    set | toggle | request | event    ---    uint8_t    00 || FF    1 + 1    { type[0] } or { type[0] data[1] }        Выход 1
+myIn16 can_object_in1(0x016C, 100, 1);    // 100 - Установка таймеров. Здесь? Или в RegisterProactive* ?
+
+
+void setup()
+{
+    can_manager.AddObj(can_object_out1);
+    can_manager.AddObj(can_object_out2);
+    can_manager.AddObj(can_object_out3);
+    can_manager.AddObj(can_object_in1);
+    
+    can_object_in1.SetTimer(100);    // Интервал таймера
+    can_object_in1.SetEvent(25);    // Интервал эвента
+
+/*
+    // Прикольно но нужно ли?
+    can_object_out3.RegisterCallback(MyCallback);
+    can_object_out3.RegisterCallback(MyCallback, FuncID);
+    can_object_out3.RegisterCallbackEx(MyCallback, FuncID_MASK);    // Битовая маска
+    can_object_out3.RegisterCallbackEx(MyCallback, FuncID_FROM, FuncID_TO);
+*/
+}
+
+void loop()
+{
+    can_manager.Tick(millis());
 }
 ```
