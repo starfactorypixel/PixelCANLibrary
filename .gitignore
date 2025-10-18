@@ -1,2 +1,21 @@
 info.txt
 local_trash/*
+
+cmake-build-*/
+build/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+tests/*.o
+# External dependencies directories should be tracked (no ignore here)
+# googletest/  (kept tracked as submodule)
+/.cache/
+*~
+.DS_Store
+/.idea/
+/.vs/
