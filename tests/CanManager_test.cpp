@@ -167,9 +167,13 @@ TEST_F(CanManagerTest, FrameBufferBehavior)
     for(uint8_t i = 0; i < BUFFER_SIZE - 1; i++) {
         EXPECT_TRUE(manager.incomingCANFrame(TEST_OBJECT_ID, data, 2));
     }
+    EXPECT_EQ(manager.getRxFrameBufferLength(), BUFFER_SIZE - 1);
     
     // Process frames
     manager.tick(100);
+
+    // Verify RX buffer is empty after processing
+    EXPECT_EQ(manager.getRxFrameBufferLength(), 0);
     
     // Verify no frames are pending to send (our mock doesn't generate responses)
     EXPECT_FALSE(manager.hasFrameToSend());
