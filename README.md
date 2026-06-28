@@ -1,3 +1,7 @@
+# CAN Library for Open Electric Vehicle project
+
+The library is using git submodules to work with [Library_CUtils repo](https://github.com/starfactorypixel/Library_CUtils/tree/main)
+
 # Using in your project
 
 In `platformio.ini` add library to the `lib_deps`:
