@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define CAN_FRAME_MAX_PAYLOAD 7 // excluding the function ID
+#define RAW_CAN_FRAME_MAX_PAYLOAD 8
 
 typedef uint16_t can_object_id_t;
 const can_object_id_t CAN_SYSTEM_ID_BROADCAST = 0x0000;
@@ -31,8 +31,8 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_EVENT_OK = 0x65,
     CAN_FUNC_EVENT_ERROR = 0xE6,
 
-    CAN_FUNC_SYSTEM_REQUEST_IN = 0x3A,
-    CAN_FUNC_SYSTEM_REQUEST_OUT_OK = 0x7A,
+    // CAN_FUNC_SYSTEM_REQUEST_IN = 0x3A, // was deleted in last protocol definition
+    // CAN_FUNC_SYSTEM_REQUEST_OUT_OK = 0x7A, // was deleted in last protocol definition
     // CAN_FUNC_SYSTEM_REQUEST_OUT_ERR = not allowed, 0xFA
 
     // CAN_FUNC_FIRST_IN = 0x00, // == CAN_FUNC_NONE
@@ -41,21 +41,14 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_FIRST_OUT_ERR = 0xC0,
 };
 
-using can_send_function_t = void (*)(can_object_id_t id, uint8_t *data, uint8_t length);
+// expected behavior for CAN_Send function:
+//     It puts CAN frame into hardware outgoing queue and returns `true`.
+//     If the outgoing queue is full the CAN_Send function should return `false`.
+using can_send_function_t = bool (*)(can_object_id_t id, uint8_t *data, uint8_t length);
 
 struct can_frame_t
 {
     can_object_id_t object_id = 0x0000;
-    union
-    {
-        uint8_t raw_data[CAN_FRAME_MAX_PAYLOAD + 1] = {0};
-        struct
-        {
-            can_function_id_t function_id;
-            uint8_t data[CAN_FRAME_MAX_PAYLOAD];
-        };
-    };
+    uint8_t raw_data[RAW_CAN_FRAME_MAX_PAYLOAD] = {0};
     uint8_t raw_data_length = 0;
-    bool initialized = false;
-    uint32_t time_ms = 0;
 };
