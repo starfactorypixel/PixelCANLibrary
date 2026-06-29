@@ -1,6 +1,9 @@
 info.txt
 local_trash/*
+platformio.ini
 
+.vscode
+.pio
 cmake-build-*/
 build/
 *.o
