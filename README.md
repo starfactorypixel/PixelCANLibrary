@@ -1,8 +1,7 @@
 # CAN Library for Open Electric Vehicle project
 
-The library is using git submodules to work with [Library_CUtils repo](https://github.com/starfactorypixel/Library_CUtils/tree/main)
 
-# Using in your project
+## Using in your project
 
 In `platformio.ini` add library to the `lib_deps`:
 ```
@@ -20,17 +19,17 @@ lib_deps =
 
 
 
-# Update library in your project
+## Update library in your project
 
 Two ways:
 1. Run command in the terminal
 2. Create task and run it
 
-## Run command in the terminal
+### Run command in the terminal
 Open terminal in the project's folder and run this command:
 `pio lib update`
 
-## Create task and run it
+### Create task and run it
 Add the following task "Update Libraries" to your project and run it with `ctrl+alt+P` → `Tasks: Run Task` → `Update Libraries` → `Continue without scanning the task output`.  
 Task code (place it in the `.vscode\tasks.json`):
 ```
