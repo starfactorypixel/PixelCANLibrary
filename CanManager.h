@@ -122,10 +122,7 @@ public:
         if (time - _last_tick < _tick_time)
             return;
 
-        if (_last_tick == 0) // only for the first call
-            _last_tick = time;
-        else // The following is better because we'll not lose ticks
-            _last_tick += _tick_time;
+        _last_tick = time;
 
         _processTXBuffer();
         _processRXBuffer();

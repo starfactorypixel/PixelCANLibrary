@@ -76,10 +76,8 @@ public:
                     timer_frame.object_id = this->getId();
                     this->sendFrame(timer_frame);
                 }
-                if (_last_timer == 0)
-                    _last_timer = time;
-                else
-                    _last_timer += _timer_period_ms
+
+                _last_timer = time;
             }
         }
 
