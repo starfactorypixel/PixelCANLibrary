@@ -65,7 +65,7 @@ private:
         }
     }
 
-    void _processObjectTicks()
+    void _processObjectTicks(uint32_t time)
     {
         for (uint8_t i = 0; i < _max_objects; i++)
         {
@@ -93,7 +93,7 @@ public:
             return false;
 
         _objects[can_object.getId() - _base_obj_id] = &can_object;
-        can_object.setParent(this);
+		can_object.setParent(*this);
         return true;
     };
 
@@ -126,7 +126,7 @@ public:
 
         _processTXBuffer();
         _processRXBuffer();
-        _processObjectTicks();
+        _processObjectTicks(time);
     }
 
     virtual bool tryToSendCANFrameFromTXQueue() override final
@@ -159,6 +159,7 @@ public:
         can_frame_t can_frame;
         can_frame.object_id = id;
         memcpy(can_frame.raw_data, data, length);
+		can_frame.raw_data_length = length;
 
         return pushFrameToTX(can_frame);
     }
