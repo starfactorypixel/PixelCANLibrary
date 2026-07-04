@@ -41,11 +41,6 @@ enum can_function_id_t : uint8_t
     CAN_FUNC_FIRST_OUT_ERR = 0xC0,
 };
 
-// expected behavior for CAN_Send function:
-//     It puts CAN frame into hardware outgoing queue and returns `true`.
-//     If the outgoing queue is full the CAN_Send function should return `false`.
-using can_send_function_t = bool (*)(can_object_id_t id, uint8_t *data, uint8_t length);
-
 struct can_frame_t
 {
     can_object_id_t object_id = 0x0000;
