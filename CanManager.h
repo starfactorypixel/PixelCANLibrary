@@ -177,6 +177,7 @@ public:
         can_frame_t can_frame;
         can_frame.object_id = id;
         memcpy(can_frame.raw_data, data, length);
+		can_frame.raw_data_length = length;
 
         return pushFrameToRX(can_frame);
     }
