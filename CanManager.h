@@ -187,7 +187,7 @@ public:
         memcpy(can_frame.raw_data, data, length);
         can_frame.raw_data_length = length;
 
-        return PushFrameToTX(can_frame);
+        return _tx_buffer.Write(can_frame);
     }
 
     virtual uint16_t GetTXQueueLength() const noexcept override final { return _tx_buffer.Count(); }
@@ -207,7 +207,7 @@ public:
         memcpy(can_frame.raw_data, data, length);
         can_frame.raw_data_length = length;
 
-        return PushFrameToRX(can_frame);
+        return _rx_buffer.Write(can_frame);
     }
 
     virtual uint16_t GetRXQueueLength() const noexcept override final { return _rx_buffer.Count(); }
