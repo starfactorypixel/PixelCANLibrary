@@ -103,8 +103,9 @@ public:
     virtual bool AddObject(CANObjectInterface &can_object) noexcept override final
     {
         uint8_t free_slot = 0;
-        while (free_slot < _max_objects && _objects[free_slot++] != nullptr)
+        while (free_slot < _max_objects && _objects[free_slot] != nullptr)
         {
+            free_slot++;
         }
         if (free_slot == _max_objects)
             return false;
