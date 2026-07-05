@@ -17,25 +17,25 @@ private:
 
 protected:
     // will be called from tick() method; use it if you need to do something independently from timers or incoming CAN frames
-    virtual void loop(uint32_t time) noexcept {}
+    virtual void OnTick(uint32_t time) noexcept {}
 
     // will be called if the object received CAN frame; you need to do all the stuff with CAN Frame here
-    virtual void frameProcessor(can_frame_t &can_frame) noexcept {}
+    virtual void OnProcessFrame(can_frame_t &can_frame) noexcept {}
 
     // will be called when it is time to send timer's CAN frame
     // your responsobility not only to prepare the data but also to send it
-    virtual void processTimer() noexcept {}
+    virtual void OnTimer() noexcept {}
 
-    bool sendFrame(can_frame_t &can_frame) noexcept
+    bool SendFrame(can_frame_t &can_frame) noexcept
     {
-        if (!hasParent())
+        if (!HasParent())
             return false;
         
         if (can_frame.raw_data[0] == (uint8_t)CAN_FUNC_NONE)
             return false;
 
-        can_frame.object_id = this->getId();
-        return _parent->pushFrameToTX(can_frame);
+        can_frame.object_id = this->GetId();
+        return _parent->PushFrameToTX(can_frame);
     }
 
     bool sendFrame(uint8_t *data, uint8_t data_length) noexcept
@@ -47,10 +47,10 @@ protected:
         if (data[0] == (uint8_t)CAN_FUNC_NONE)
             return false;
 
-        if (!hasParent())
+        if (!HasParent())
             return false;
         
-        return _parent->pushFrameToTX(this->getId(), data, data_length);
+        return _parent->PushFrameToTX(this->GetId(), data, data_length);
     }
 
 public:
@@ -62,35 +62,35 @@ public:
 
     virtual ~CANObjectBase() = default;
 
-    virtual can_object_id_t getId() const noexcept override final { return _id; }
+    virtual can_object_id_t GetId() const noexcept override final { return _id; }
 
-    virtual void setParent(CanManagerInterface &parent) noexcept override final { _parent = &parent; }
-    virtual bool hasParent() const noexcept override final { return _parent != nullptr; }
-    virtual CanManagerInterface *getParent() const noexcept override final { return _parent; }
+    virtual void SetParent(CanManagerInterface &parent) noexcept override final { _parent = &parent; }
+    virtual bool HasParent() const noexcept override final { return _parent != nullptr; }
+    virtual CanManagerInterface *GetParent() const noexcept override final { return _parent; }
 
-    virtual void setTimerPeriod(uint16_t period_ms) noexcept override final { _timer_period_ms = period_ms; }
-    virtual uint16_t getTimerPeriod() const noexcept override final { return _timer_period_ms; }
-    virtual bool isTimerEnabled() const noexcept override final { return _timer_period_ms != TIMER_DISABLED; }
+    virtual void SetTimerPeriod(uint16_t period_ms) noexcept override final { _timer_period_ms = period_ms; }
+    virtual uint16_t GetTimerPeriod() const noexcept override final { return _timer_period_ms; }
+    virtual bool IsTimerEnabled() const noexcept override final { return _timer_period_ms != TIMER_DISABLED; }
 
-    virtual void tick(uint32_t time) noexcept override final
+    virtual void Tick(uint32_t time) noexcept override final
     {
-        this->loop(time);
+        this->OnTick(time);
 
-        if (!this->isTimerEnabled())
+        if (!this->IsTimerEnabled())
             return;
 
         if (time - _last_timer < _timer_period_ms)
             return;
 
-        this->processTimer();
+        this->OnTimer();
         _last_timer = time;
     }
 
-    virtual void processFrame(can_frame_t &can_frame) noexcept override final
+    virtual void ProcessFrame(can_frame_t &can_frame) noexcept override final
     {
-        if (can_frame.object_id != this->getId() && can_frame.object_id != CAN_SYSTEM_ID_BROADCAST)
+        if (can_frame.object_id != this->GetId() && can_frame.object_id != CAN_SYSTEM_ID_BROADCAST)
             return;
 
-        this->frameProcessor(can_frame);
+        this->OnProcessFrame(can_frame);
     }
 };
