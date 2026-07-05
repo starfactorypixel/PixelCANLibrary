@@ -146,9 +146,9 @@ public:
 
         _last_tick = time;
 
-        _ProcessTXBuffer();
         _ProcessRXBuffer();
         _ProcessObjects();
+        _ProcessTXBuffer();
     }
 
     virtual bool TryToSendCANFrameFromTXQueue() noexcept override final
