@@ -20,7 +20,6 @@ using can_send_function_t = bool (*)(can_object_id_t id, uint8_t *data, uint8_t 
 using set_interrupts_enabled_t = void (*)(bool enable);
 
 template <
-    can_object_id_t _base_obj_id,
     uint8_t _max_objects,
     uint8_t _can_frame_rx_buffer_size = 16,
     uint8_t _can_frame_tx_buffer_size = 16,
@@ -61,12 +60,11 @@ private:
 
             if (can_frame.object_id == CAN_SYSTEM_ID_BROADCAST)
             {
-                for (uint8_t i = 0; i < _max_objects; i++)
+                uint8_t index = 0;
+                while (_objects[index] != nullptr)
                 {
-                    if (_objects[i] != nullptr)
-                    {
-                        _objects[i]->ProcessFrame(can_frame);
-                    }
+                    _objects[index]->ProcessFrame(can_frame);
+                    index++;
                 }
             }
             else
@@ -82,12 +80,11 @@ private:
 
     void _ProcessObjects() const noexcept
     {
-        for (uint8_t i = 0; i < _max_objects; i++)
+        uint8_t index = 0;
+        while (_objects[index] != nullptr)
         {
-            if (_objects[i] != nullptr)
-            {
-                _objects[i]->Tick(_Millis());
-            }
+            _objects[index]->Tick(_Millis());
+            index++;
         }
     }
 
@@ -105,14 +102,14 @@ public:
 
     virtual bool AddObject(CANObjectInterface &can_object) noexcept override final
     {
-        if (can_object.GetId() < _base_obj_id)
-            return false;
-        if (can_object.GetId() - _base_obj_id >= _max_objects)
-            return false;
-        if (_objects[can_object.GetId() - _base_obj_id] != nullptr)
+        uint8_t free_slot = 0;
+        while (_objects[free_slot++] != nullptr)
+        {
+        }
+        if (free_slot == _max_objects)
             return false;
 
-        _objects[can_object.GetId() - _base_obj_id] = &can_object;
+        _objects[free_slot] = &can_object;
         can_object.SetParent(*this);
 
         return true;
@@ -120,22 +117,28 @@ public:
 
     virtual bool HasCanObject(can_object_id_t id) const noexcept override final
     {
-        if (id < _base_obj_id)
-            return false;
-        if (id - _base_obj_id >= _max_objects)
-            return false;
+        uint8_t index = 0;
+        while (_objects[index] != nullptr)
+        {
+            if (_objects[index]->GetId() == id)
+                return true;
+            index++;
+        }
 
-        return _objects[id - _base_obj_id] != nullptr;
+        return false;
     }
 
     virtual CANObjectInterface *GetCanObject(can_object_id_t id) const noexcept override final
     {
-        if (id < _base_obj_id)
-            return nullptr;
-        if (id - _base_obj_id >= _max_objects)
-            return nullptr;
+        uint8_t index = 0;
+        while (_objects[index] != nullptr)
+        {
+            if (_objects[index]->GetId() == id)
+                return _objects[index];
+            index++;
+        }
 
-        return _objects[id - _base_obj_id];
+        return nullptr;
     }
 
     virtual void Processing() noexcept override final
