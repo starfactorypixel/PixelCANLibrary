@@ -61,7 +61,7 @@ private:
             if (can_frame.object_id == CAN_SYSTEM_ID_BROADCAST)
             {
                 uint8_t index = 0;
-                while (_objects[index] != nullptr)
+                while (index < _max_objects && _objects[index] != nullptr)
                 {
                     _objects[index]->ProcessFrame(can_frame);
                     index++;
@@ -81,7 +81,7 @@ private:
     void _ProcessObjects() const noexcept
     {
         uint8_t index = 0;
-        while (_objects[index] != nullptr)
+        while (index < _max_objects && _objects[index] != nullptr)
         {
             _objects[index]->Tick(_Millis());
             index++;
@@ -103,7 +103,7 @@ public:
     virtual bool AddObject(CANObjectInterface &can_object) noexcept override final
     {
         uint8_t free_slot = 0;
-        while (_objects[free_slot++] != nullptr)
+        while (free_slot < _max_objects && _objects[free_slot++] != nullptr)
         {
         }
         if (free_slot == _max_objects)
@@ -118,7 +118,7 @@ public:
     virtual bool HasCanObject(can_object_id_t id) const noexcept override final
     {
         uint8_t index = 0;
-        while (_objects[index] != nullptr)
+        while (index < _max_objects && _objects[index] != nullptr)
         {
             if (_objects[index]->GetId() == id)
                 return true;
@@ -131,7 +131,7 @@ public:
     virtual CANObjectInterface *GetCanObject(can_object_id_t id) const noexcept override final
     {
         uint8_t index = 0;
-        while (_objects[index] != nullptr)
+        while (index < _max_objects && _objects[index] != nullptr)
         {
             if (_objects[index]->GetId() == id)
                 return _objects[index];
