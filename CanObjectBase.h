@@ -63,6 +63,7 @@ public:
     virtual ~CANObjectBase() = default;
 
     virtual can_object_id_t GetId() const noexcept override final { return _id; }
+    virtual void SetId(can_object_id_t id) noexcept override final { _id = id; }
 
     virtual void SetParent(CanManagerInterface &parent) noexcept override final { _parent = &parent; }
     virtual bool HasParent() const noexcept override final { return _parent != nullptr; }

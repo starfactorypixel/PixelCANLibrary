@@ -9,6 +9,7 @@ public:
     virtual ~CANObjectInterface() = default;
 
     virtual can_object_id_t GetId() const noexcept = 0;
+    virtual void SetId(can_object_id_t id) noexcept = 0;
 
     virtual void SetParent(CanManagerInterface &parent) noexcept = 0;
     virtual bool HasParent() const noexcept = 0;
