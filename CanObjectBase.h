@@ -74,6 +74,8 @@ public:
 
     virtual void tick(uint32_t time) noexcept override final
     {
+        this->loop(time);
+
         if (!this->isTimerEnabled())
             return;
 
@@ -82,8 +84,6 @@ public:
 
         this->processTimer();
         _last_timer = time;
-
-        this->loop(time);
     }
 
     virtual void processFrame(can_frame_t &can_frame) noexcept override final
