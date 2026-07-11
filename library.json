@@ -2,14 +2,15 @@
   "name": "PixelCANLibrary",
   "description": "CAN-based framework for the Pixel (solar-powered car open project)",
   "version": "0.2.0",
-  "repository":
-  {
-      "type": "git",
-      "url": "https://github.com/starfactorypixel/PixelCANLibrary.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/starfactorypixel/PixelCANLibrary.git"
   },
-  "dependencies":
-  {
-      "CUtils": "https://github.com/starfactorypixel/Library_CUtils.git"
-  },
+  "dependencies": [
+    {
+      "name": "CUtils",
+      "version": "https://github.com/starfactorypixel/Library_CUtils"
+    }
+  ],
   "headers": "CANLibrary.h"
 }
