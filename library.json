@@ -9,7 +9,7 @@
   },
   "dependencies":
   {
-      "Library_CUtils": "https://github.com/starfactorypixel/Library_CUtils.git"
+      "CUtils": "https://github.com/starfactorypixel/Library_CUtils.git"
   },
   "headers": "CANLibrary.h"
 }
