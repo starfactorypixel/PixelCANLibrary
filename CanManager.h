@@ -6,19 +6,6 @@
 #include "CanManagerInterface.h"
 #include "CanObjectInterface.h"
 
-// expected behavior for time source function: it returns time in ms
-using get_time_ms_function_t = uint32_t (*)();
-
-// expected behavior for CAN_Send function:
-//     It puts CAN frame into hardware outgoing queue and returns `true`.
-//     If the outgoing queue is full the CAN_Send function should return `false`.
-using can_send_function_t = bool (*)(can_object_id_t id, uint8_t *data, uint8_t length);
-
-// expected behavior for interrupt control function:
-//     if enable = true, it shold enable interrupts
-//     if enable = false, it should disable interrupts
-using set_interrupts_enabled_t = void (*)(bool enable);
-
 template <
     uint8_t _max_objects,
     uint8_t _can_frame_rx_buffer_size = 16,
@@ -26,6 +13,19 @@ template <
     uint8_t _tick_time = 10>
 class CANManager : public CanManagerInterface
 {
+    // expected behavior for time source function: it returns time in ms
+    using get_time_ms_function_t = uint32_t (*)();
+
+    // expected behavior for CAN_Send function:
+    //     It puts CAN frame into hardware outgoing queue and returns `true`.
+    //     If the outgoing queue is full the CAN_Send function should return `false`.
+    using can_send_function_t = bool (*)(can_object_id_t id, uint8_t *data, uint8_t length);
+
+    // expected behavior for interrupt control function:
+    //     if enable = true, it shold enable interrupts
+    //     if enable = false, it should disable interrupts
+    using set_interrupts_enabled_t = void (*)(bool enable);
+
 private:
     RingBuffer<_can_frame_rx_buffer_size, can_frame_t> _rx_buffer;
     RingBuffer<_can_frame_tx_buffer_size, can_frame_t> _tx_buffer;
