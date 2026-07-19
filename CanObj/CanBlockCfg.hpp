@@ -1,5 +1,6 @@
 #pragma once
 #include <inttypes.h>
+#include <string.h>
 #include <CanObjectBase.h>
 
 class CanBlockCfg : public CANObjectBase
