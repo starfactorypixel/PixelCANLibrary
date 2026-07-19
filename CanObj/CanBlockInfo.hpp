@@ -2,7 +2,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <CanObjectBase.h>
-#include <CANBackEvents.h>
+#include <CanObj/IBlockInfoSender.hpp>
 
 class CanBlockInfo : public CANObjectBase, public IBlockInfoSender
 {
