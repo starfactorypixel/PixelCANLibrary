@@ -9,7 +9,7 @@ class CanInfoParam : public CANObjectBase
 {
 	//using T = uint16_t; static constexpr uint8_t N = 1;
 	struct __attribute__((packed)) request_t { uint8_t fId; };
-	struct __attribute__((packed)) timer_t { uint8_t fId; T val[N]; };
+	struct __attribute__((packed)) timer_t { uint8_t fId = CAN_FUNC_TIMER_NORMAL; T val[N]; };
 	struct __attribute__((packed)) event_ok_t { uint8_t fId = CAN_FUNC_EVENT_OK; T val[N]; };
 	
 	using function_classifier_t = uint8_t (*)(uint8_t idx, T value);
