@@ -12,7 +12,7 @@ class CanInfoParam : public CANObjectBase
 	struct __attribute__((packed)) timer_t { uint8_t fId = CAN_FUNC_TIMER_NORMAL; T val[N]; };
 	struct __attribute__((packed)) event_ok_t { uint8_t fId = CAN_FUNC_EVENT_OK; T val[N]; };
 	
-	using function_classifier_t = uint8_t (*)(uint8_t idx, T value);
+	using function_classifier_t = uint8_t (*)(uint8_t idx, const T value);
 	
 	public:
 		template <typename ...Args> 
@@ -66,7 +66,7 @@ class CanInfoParam : public CANObjectBase
 			timer_t answer = {};
 			for(uint8_t i = 0; i < N; ++i)
 			{
-				T val = *_value_ptr[i];
+				const T val = *_value_ptr[i];
 				uint8_t fId = _FuncClassifier(i, val);
 				if(fId > answer.fId)
 					answer.fId = fId;
@@ -78,6 +78,6 @@ class CanInfoParam : public CANObjectBase
 		}
 		
 	private:
-		T *_value_ptr[N];
-		function_classifier_t _FuncClassifier = [](uint8_t idx, T value) -> uint8_t { return CAN_FUNC_TIMER_NORMAL; };
+		const T *_value_ptr[N];
+		function_classifier_t _FuncClassifier = [](uint8_t idx, const T value) -> uint8_t { return CAN_FUNC_TIMER_NORMAL; };
 };
