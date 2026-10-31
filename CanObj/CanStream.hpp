@@ -4,10 +4,10 @@
 #include <CanObjectBase.h>
 #include "ICanStreamRaw.hpp"
 
-template <typename T, uint8_t _count> 
-class CanStreamObj : public CANObjectBase, public ICanStreamRaw
+template <typename T> 
+class CanStream : public CANObjectBase, public ICanStreamRaw
 {
-	//using T = int8_t; static constexpr uint8_t _count = 16;
+	//using T = int8_t;
 	struct __attribute__((packed)) request_t { uint8_t fId; };
 	struct __attribute__((packed)) stream_t { uint8_t fId = 0x65; uint8_t num; T val; };
 	
@@ -15,10 +15,13 @@ class CanStreamObj : public CANObjectBase, public ICanStreamRaw
 	
 	public:
 
-		CanStreamObj(can_object_id_t id) : CANObjectBase(id)
+		CanStream(can_object_id_t id, T *collection, uint8_t count) : CANObjectBase(id), _collection(collection), _count(collection ? count : 0)
 		{
 
 		};
+
+		CanStream(const CanStream &) = delete;
+		CanStream &operator=(const CanStream &) = delete;
 
 		void SetInterval(uint16_t interval)
 		{
@@ -69,8 +72,8 @@ class CanStreamObj : public CANObjectBase, public ICanStreamRaw
 			{
 				case CAN_FUNC_REQUEST_IN:
 				{
-					//request_t *obj = (request_t *)can_frame.raw_data;
-
+					if(_count == 0) break;
+					
 					_last_tick = 0;
 					_send_idx = 0;
 					_is_run = true;
@@ -94,9 +97,10 @@ class CanStreamObj : public CANObjectBase, public ICanStreamRaw
 			return;
 		}
 		
-		T _collection[_count] = {};
+		T *_collection;
 		uint32_t _last_tick = 0;
 		uint16_t _interval = 100;
 		uint8_t _send_idx = 0;
+		uint8_t _count;
 		bool _is_run = false;
 };
