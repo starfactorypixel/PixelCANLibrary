@@ -2,10 +2,10 @@
 #include <inttypes.h>
 #include <string.h>
 #include <CanObjectBase.h>
-#include "ICanStreamRaw.hpp"
+#include "ICanStream.hpp"
 
 template <typename T> 
-class CanStream : public CANObjectBase, public ICanStreamRaw
+class CanStream : public CANObjectBase, public ICanStream
 {
 	//using T = int8_t;
 	struct __attribute__((packed)) request_t { uint8_t fId; };
@@ -48,6 +48,36 @@ class CanStream : public CANObjectBase, public ICanStreamRaw
 			return true;
 		}
 		
+		virtual bool GetMinRaw(void *data, uint8_t size) const noexcept override
+		{
+			if(size != sizeof(T)) return false;
+
+			T result = _collection[0];
+			for(uint8_t i = 1; i < _count; ++i)
+			{
+				if(_collection[i] < result)
+					result = _collection[i];
+			}
+
+			memcpy(data, &result, sizeof(T));
+			return true;
+		}
+		
+		virtual bool GetMaxRaw(void *data, uint8_t size) const noexcept override
+		{
+			if(size != sizeof(T)) return false;
+
+			T result = _collection[0];
+			for(uint8_t i = 1; i < _count; ++i)
+			{
+				if(_collection[i] > result)
+					result = _collection[i];
+			}
+
+			memcpy(data, &result, sizeof(T));
+			return true;
+		}
+
 		virtual void OnTick(uint32_t time) noexcept override
 		{
 			if(_is_run == false) return;
@@ -96,7 +126,7 @@ class CanStream : public CANObjectBase, public ICanStreamRaw
 
 			return;
 		}
-		
+
 		T *_collection;
 		uint32_t _last_tick = 0;
 		uint16_t _interval = 100;
