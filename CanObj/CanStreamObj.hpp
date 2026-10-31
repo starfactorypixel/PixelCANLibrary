@@ -1,16 +1,21 @@
 #pragma once
 #include <inttypes.h>
+#include <string.h>
 #include <CanObjectBase.h>
+#include "ICanStreamRaw.hpp"
 
-template <typename T> 
-class CanStreamObj : public CANObjectBase
+template <typename T, uint8_t _count> 
+class CanStreamObj : public CANObjectBase, public ICanStreamRaw
 {
-	//using T = int8_t;
+	//using T = int8_t; static constexpr uint8_t _count = 16;
 	struct __attribute__((packed)) request_t { uint8_t fId; };
 	struct __attribute__((packed)) stream_t { uint8_t fId = 0x65; uint8_t num; T val; };
 	
+	static_assert(sizeof(stream_t) <= 8, "stream_t does not fit in CAN frame");
+	
 	public:
-		CanStreamObj(can_object_id_t id, const T *collection, uint8_t length) : CANObjectBase(id), _collection(collection), _length(length)
+
+		CanStreamObj(can_object_id_t id) : CANObjectBase(id)
 		{
 
 		};
@@ -22,13 +27,22 @@ class CanStreamObj : public CANObjectBase
 
 	protected:
 		
-		void handlerRequestFunction(request_t *obj)
+		virtual bool GetRaw(uint8_t idx, void *data, uint8_t size) const noexcept override
 		{
-			_last_tick = 0;
-			_send_idx = 0;
-			_is_run = true;
+			if(size != sizeof(T)) return false;
+			if(idx >= _count) return false;
 			
-			return;
+			memcpy(data, &_collection[idx], sizeof(T));
+			return true;
+		}
+		
+		virtual bool SetRaw(uint8_t idx, const void *data, uint8_t size) noexcept override
+		{
+			if(size != sizeof(T)) return false;
+			if(idx >= _count) return false;
+			
+			memcpy(&_collection[idx], data, sizeof(T));
+			return true;
 		}
 		
 		virtual void OnTick(uint32_t time) noexcept override
@@ -38,9 +52,9 @@ class CanStreamObj : public CANObjectBase
 			if((time - _last_tick) < _interval) return;
 			_last_tick = time;
 			
-			_SendStreamElement(_send_idx++);
+			_SendStreamElement(_send_idx);
 			
-			if(_send_idx >= _length)
+			if(++_send_idx >= _count)
 			{
 				_is_run = false;
 			}
@@ -55,8 +69,12 @@ class CanStreamObj : public CANObjectBase
 			{
 				case CAN_FUNC_REQUEST_IN:
 				{
-					request_t *obj = (request_t *)can_frame.raw_data;
-					handlerRequestFunction(obj);
+					//request_t *obj = (request_t *)can_frame.raw_data;
+
+					_last_tick = 0;
+					_send_idx = 0;
+					_is_run = true;
+					
 					break;
 				}
 			}
@@ -65,6 +83,7 @@ class CanStreamObj : public CANObjectBase
 		}
 		
 	private:
+		
 		void _SendStreamElement(uint8_t idx)
 		{
 			stream_t answer = {};
@@ -75,12 +94,9 @@ class CanStreamObj : public CANObjectBase
 			return;
 		}
 		
-		const T *_collection;
-		uint8_t _length;
-
-		uint16_t _interval = 100;
-		bool _is_run = false;
-		uint8_t _send_idx = 0;
-		
+		T _collection[_count] = {};
 		uint32_t _last_tick = 0;
+		uint16_t _interval = 100;
+		uint8_t _send_idx = 0;
+		bool _is_run = false;
 };
